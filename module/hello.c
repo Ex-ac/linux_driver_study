@@ -1,7 +1,7 @@
 #include <linux/init.h>
 #include <linux/stat.h>
 #include <linux/module.h>
-#include <linux/err.h>
+#include <linux/noerr.h>
 
 static char *author = "Ex-ac"; 
 module_param(author, charp, S_IRUGO);

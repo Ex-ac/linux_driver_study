@@ -4,21 +4,24 @@
 #include <linux/slab.h>
 #include <linux/uaccess.h>
 #include <linux/errno.h>
+#include <linux/cdev.h>
+
 
 #define GLOBALMEM_SIZE 0x1000
 #define GLOBALMEM_MAJOR 230
 #define GLOBALMEM_MAGIC 'g'
-#define MEM_CLEAR _IO(GLOBALMEM_MAGICm 0)
+#define MEM_CLEAR _IO(GLOBALMEM_MAGIC, 0)
 
 // 设备号是设备的唯一标识
-static int globalmem_major = GLOBALMEM_MAJOR
+static int globalmem_major = GLOBALMEM_MAJOR;
 module_param(globalmem_major, int, S_IRUGO);
 
 struct globalmem_dev
 {
-    struct cdev cdev;
+    struct cdev dev;
     unsigned char mem[GLOBALMEM_SIZE];
 };
+static struct globalmem_dev *globalmem_devp;
 
 static ssize_t globalmem_read(struct file *filp, char __user *buf, size_t size, loff_t *ppos)
 {
@@ -26,7 +29,7 @@ static ssize_t globalmem_read(struct file *filp, char __user *buf, size_t size, 
     unsigned long p = *ppos;
     unsigned int count = size;
 
-    globalmem_dev *devp = (struct globalmem_dev *)(filp->private_data);
+    struct globalmem_dev *devp = (struct globalmem_dev *)(filp->private_data);
     if (p >= GLOBALMEM_SIZE)
         return 0;
 
@@ -49,7 +52,7 @@ static ssize_t globalmem_write(struct file *filp, const char __user *buf, size_t
 {
     int ret;
     unsigned long p = *ppos;
-    globalmem_dev *devp = (struct globalmem_dev *)(filp->private_data);
+    struct globalmem_dev *devp = (struct globalmem_dev *)(filp->private_data);
     // unsigned long p = *ppos;
     // unsigned int count = size;
 
@@ -59,7 +62,7 @@ static ssize_t globalmem_write(struct file *filp, const char __user *buf, size_t
     if (size > GLOBALMEM_SIZE - p)
         size = GLOBALMEM_SIZE - p;
 
-    if (copy_from_user(devp->mem + p, buf, size)
+    if (copy_from_user(devp->mem + p, buf, size))
         return -EFAULT;
     else
     {
@@ -71,23 +74,23 @@ static ssize_t globalmem_write(struct file *filp, const char __user *buf, size_t
         
 }
 
-static loof_t globalmem_llseek(struct  file *filp, loff_t offset, int orig)
+static loff_t globalmem_llseek(struct  file *filp, loff_t offset, int orig)
 {
-    int ret;
+    loff_t ret;
     switch (orig)
     {
         case 0:
             if (offset <0 || offset > GLOBALMEM_SIZE)
                 return -EINVAL;
             filp->f_pos = (unsigned int)(offset);
-            ret = fip->f_ops;
+            ret = filp->f_pos;
 
             break;
         case 1:
-            if (filp->f_ops + offset > GLOBALMEM_SIZE || filp->f_op + offset < 0)
+            if (filp->f_pos + offset > GLOBALMEM_SIZE || filp->f_pos + offset < 0)
                 return -EINVAL;
-            filp->f_ops += offset;
-            ret = fip->f_ops;
+            filp->f_pos += offset;
+            ret = filp->f_pos;
             break;
 
         default:
@@ -103,7 +106,7 @@ static long globalmem_ioctl(struct file *filp, unsigned int cmd, unsigned long a
     switch (cmd)
     {
         case MEM_CLEAR:
-            memset(devp->mem, GLOBALMEM_SIZE);
+            memset(devp->mem, 0, GLOBALMEM_SIZE);
             printk(KERN_INFO "Globalmem is set to zero\n");
             ret = 0;
             break;
@@ -124,7 +127,7 @@ static int globalmem_release(struct inode *inode, struct file *filp)
 {
     return 0;
 }
-static struct globalmem_dev *globalmem_devp;
+
 
 static const struct file_operations globalmem_ops = 
 {
@@ -138,13 +141,13 @@ static const struct file_operations globalmem_ops =
 };
 
 
-static void globalmem_setup_cdev(struct *devp, int index)
+static void globalmem_setup_cdev(struct globalmem_dev *devp, int index)
 {
     int err, devno = MKDEV(globalmem_major, index);
 
-    cdev_init(&devp->cdev, globalmem_ops);
-    dev->owner = THIS_MODULE;
-    err = cdev_add(&devp->cdev, devno, 1)
+    cdev_init(&devp->dev, &globalmem_ops);
+    devp->dev.owner = THIS_MODULE;
+    err = cdev_add(&devp->dev, devno, 1);
     if (err)
         printk(KERN_INFO "Error %d adding globalmem", err, index);
 }
@@ -171,15 +174,15 @@ static int __init globalmem_init(void)
         unregister_chrdev_region(devno, 1);
         return -ENOMEM;
     }
-    globalmem_setup_cdev();
+    globalmem_setup_cdev(globalmem_devp, 0);
     return 0;
 }
 module_init(globalmem_init);
 
 static void __exit globalmem_exit(void)
 {
-    cdev_del(&globalmem_devp->cdev);
-    kfree globalmem_devp;
+    cdev_del(&globalmem_devp->dev);
+    kfree(globalmem_devp);
     unregister_chrdev_region(MKDEV(globalmem_major, 0), 1);
 }
 
