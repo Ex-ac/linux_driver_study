@@ -5,13 +5,13 @@
 #include <linux/uaccess.h>
 #include <linux/errno.h>
 #include <linux/cdev.h>
+#include <linux/kernel.h>
 
-
-#define GLOBALMEM_SIZE 0x1000
-#define GLOBALMEM_MAJOR 230
-#define GLOBALMEM_MAGIC 'g'
-#define MEM_CLEAR _IO(GLOBALMEM_MAGIC, 0)
-
+#define GLOBALMEM_SIZE      0x1000
+#define GLOBALMEM_MAJOR     230
+#define GLOBALMEM_MAGIC     'g'
+#define MEM_CLEAR           _IO(GLOBALMEM_MAGIC, 0)
+#define DEVICE_NUM          10
 // 设备号是设备的唯一标识
 static int globalmem_major = GLOBALMEM_MAJOR;
 module_param(globalmem_major, int, S_IRUGO);
@@ -68,7 +68,7 @@ static ssize_t globalmem_write(struct file *filp, const char __user *buf, size_t
     {
         ret = size;
         *ppos = p + size;
-        printk(KERN_INFO "Write %u byte(s) to %lu\n", size, p);
+        printk(KERN_INFO "Write %lu byte(s) to %lu\n", size, p);
     }
     return ret;
         
@@ -119,7 +119,8 @@ static long globalmem_ioctl(struct file *filp, unsigned int cmd, unsigned long a
 
 static int globalmem_open(struct inode *inode, struct file *filp)
 {
-    filp->private_data = (void *)(globalmem_devp);
+    struct globalmem_dev *devp = container_of(inode->i_cdev, struct globalmem_dev, dev);
+    filp->private_data = devp;
     return 0;
 }
 
@@ -155,35 +156,45 @@ static void globalmem_setup_cdev(struct globalmem_dev *devp, int index)
 static int __init globalmem_init(void)
 {
     int ret;
+    int i;
     dev_t devno = MKDEV(globalmem_major, 0);
 
     if (globalmem_major)
-        ret = register_chrdev_region(devno, 1, "globalmem");
+        ret = register_chrdev_region(devno, DEVICE_NUM, "globalmem");
     else
     {
-        ret = alloc_chrdev_region(&devno, 0, 1, "globalmem");
+        ret = alloc_chrdev_region(&devno, 0, DEVICE_NUM, "globalmem");
         globalmem_major = MAJOR(devno);
     }
     
     if (ret < 0)
         return ret;
     
-    globalmem_devp = kzalloc(sizeof(struct globalmem_dev), GFP_KERNEL);
+    globalmem_devp = kzalloc(sizeof(struct globalmem_dev) * DEVICE_NUM, GFP_KERNEL);
     if (!globalmem_devp)
     {
-        unregister_chrdev_region(devno, 1);
+        unregister_chrdev_region(devno, DEVICE_NUM);
         return -ENOMEM;
     }
-    globalmem_setup_cdev(globalmem_devp, 0);
+    for (i = 0; i < DEVICE_NUM; ++i)
+    {
+        globalmem_setup_cdev(globalmem_devp + i, i);
+
+    }
     return 0;
 }
 module_init(globalmem_init);
 
 static void __exit globalmem_exit(void)
 {
-    cdev_del(&globalmem_devp->dev);
+    int i;
+    for (i = 0; i < DEVICE_NUM; ++i)
+    {
+        cdev_del(&(globalmem_devp + i)->dev);
+    }
+    
     kfree(globalmem_devp);
-    unregister_chrdev_region(MKDEV(globalmem_major, 0), 1);
+    unregister_chrdev_region(MKDEV(globalmem_major, 0), DEVICE_NUM);
 }
 
 module_exit(globalmem_exit);
