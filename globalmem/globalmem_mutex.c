@@ -12,7 +12,7 @@
 #define GLOBALMEM_MAJOR     230
 #define GLOBALMEM_MAGIC     'g'
 #define GLOBALMEM_MEM_CLEAR _IO(GLOBALMEM_MAGIC, 0)
-#define GLOBALMEM_NUM       10
+#define DEVICE_NUM       10
 
 static int globalmem_major = GLOBALMEM_MAJOR;
 module_param(globalmem_major, int, S_IRUGO);
@@ -32,20 +32,20 @@ static ssize_t globalmem_read(struct file *filp, char __user *buf, size_t size, 
     unsigned long p = *ppos;
     struct globalmem_dev *devp = (struct globalmem_dev *)(filp->private_data);
 
-    mutex_lock(globalmem_devp->mutex);
+    mutex_lock(&devp->mutex);
 
     if (p >= GLOBALMEM_SIZE)
     {
-        mutex_unlock(globalmem_devp->mutex);
+        mutex_unlock(&devp->mutex);
         return 0;
     }
 
-    if (p > GLOBALMEM_SIZE - size)
+    if (size > GLOBALMEM_SIZE - p)
     {
-        p = GLOBALMEM_SIZE - p;
+        size = GLOBALMEM_SIZE - p;
     }
     
-    if (copy_to_user(buf, globalmem_devp->mem + p, size))
+    if (copy_to_user(buf, devp->mem + p, size))
     {
         ret = -EFAULT;
     }
@@ -53,31 +53,32 @@ static ssize_t globalmem_read(struct file *filp, char __user *buf, size_t size, 
     {
         *ppos += size;
         ret = size;
-        printk(KERN_INFO "globalmem: Read %lu %byte(s) form %lu\n", size, p);
+        printk(KERN_INFO "globalmem: Read %lu byte(s) form %lu\n", size, p);
     }
-    mutex_unlock(globalmem_devp->mutex);
+    mutex_unlock(&devp->mutex);
+    return ret;
 }
 
-static ssize_t globalmem_write(file *filp, const char __user *buf, size_t size, loft_t *ppos)
+static ssize_t globalmem_write(struct file *filp, const char __user *buf, size_t size, loff_t *ppos)
 {
     int ret;
     unsigned long p = *ppos;
-    struct globalmem_dev *globalmem_devp = (struct globalmem_dev *)(filp->private_data);
+    struct globalmem_dev *devp = (struct globalmem_dev *)(filp->private_data);
     
-    mutex_lock(globalmem_devp->mutex);
+    mutex_lock(&devp->mutex);
 
     if (p >= GLOBALMEM_SIZE)
     {
-        mutex_unlock(globalmem_devp->mutex);
+        mutex_unlock(&devp->mutex);
         return 0;
     }
 
-    if (p > GLOBALMEM_SIZE - size)
+    if (size > GLOBALMEM_SIZE - p)
     {
         size = GLOBALMEM_SIZE - p;
     }
 
-    if (copy_from_user(globalmem_devp->mem + p, buf, size))
+    if (copy_from_user(devp->mem + p, buf, size))
     {
         ret = -EFAULT;
     }
@@ -87,7 +88,7 @@ static ssize_t globalmem_write(file *filp, const char __user *buf, size_t size, 
         *ppos += size;
         printk(KERN_INFO "globalmem: Write %lu byte(s) to %lu\n", size, p);
     }
-    mutex_unlock(globalmem_devp->mutex);
+    mutex_unlock(&devp->mutex);
     return ret;
 }
 
@@ -107,7 +108,7 @@ static loff_t globalmem_llseek(struct file *filp, loff_t offset, int orig)
             
             break;
         case 1:
-            if (offset + filp->f_ops < 0 || offset + filp->f_ops > GLOBALMEM_SIZE)
+            if (offset + filp->f_pos < 0 || offset + filp->f_pos > GLOBALMEM_SIZE)
             {
                 return -EINVAL;
             }
@@ -122,16 +123,16 @@ static loff_t globalmem_llseek(struct file *filp, loff_t offset, int orig)
     return ret;
 }
 
-static long globalmem_ioctl(struct file *filp, unsinged int cmd, unsigned long arg)
+static long globalmem_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
     long ret;
-    struct globalmem_dev *globalmem_devp = (struct globalmem_dev *)(filp->private_data);
+    struct globalmem_dev *devp = (struct globalmem_dev *)(filp->private_data);
     switch (cmd)
     {
         case GLOBALMEM_MEM_CLEAR:
-            mutex_lock(globalmem_devp->mutex);
-            memset(globalmem_devp->mem, 0,GLOBALMEM_SIZE);
-            mutex_unlock(globalmem_devp->mutex);
+            mutex_lock(&devp->mutex);
+            memset(devp->mem, 0,GLOBALMEM_SIZE);
+            mutex_unlock(&devp->mutex);
             ret = 0;
             break;
     
@@ -149,7 +150,7 @@ static int globalmem_open(struct inode *inode, struct file *filp)
     return 0;
 }
 
-struct int globalmem_release(struct inode *inode, struct file *filp)
+static int globalmem_release(struct inode *inode, struct file *filp)
 {
     return 0;
 }
@@ -167,11 +168,11 @@ static struct file_operations global_globalmem_ops =
 
 static void globalmem_setup_cdev(struct globalmem_dev *devp, int index)
 {
-    dev_t devno = MKDEV(globalmem_major. index);
+    dev_t devno = MKDEV(globalmem_major, index);
     int err;
-    cdev_init(devp->cdev, global_globalmem_ops);
+    cdev_init(&devp->cdev, &global_globalmem_ops);
     devp->cdev.owner = THIS_MODULE;
-    err = cdev_add(devp->cdev, devno, 1);
+    err = cdev_add(&devp->cdev, devno, 1);
     if (err)
     {
         printk(KERN_INFO "Error %d adding globalmem", err);
@@ -191,7 +192,7 @@ static int __init globalmem_init(void)
     }
     else
     {
-        ret = alloc_chrdev_region(&devno, DEVICE_NUM, "globalmem");
+        ret = alloc_chrdev_region(&devno, 0, DEVICE_NUM, "globalmem");
         globalmem_major = MAJOR(devno);
     }
 
@@ -200,7 +201,7 @@ static int __init globalmem_init(void)
         return ret;
     }
 
-    global_globalmem_devp = kzalloc(sizeof(sturct globalmem_dev) * DEVICE_NUM, GFP_KERNEL);
+    global_globalmem_devp = kzalloc(sizeof(struct globalmem_dev) * DEVICE_NUM, GFP_KERNEL);
 
     if (!global_globalmem_devp)
     {
@@ -235,5 +236,5 @@ static void __exit globalmem_exit(void)
 module_exit(globalmem_exit);
 
 MODULE_LICENSE("GPL");
-MODULE_AUTHOR("Ex-ac ex-ac@outlook.com")
+MODULE_AUTHOR("Ex-ac ex-ac@outlook.com");
 
