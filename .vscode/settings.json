@@ -1,6 +1,8 @@
 {
     "files.associations": {
         "init.h": "c",
-        "stat.h": "c"
-    }
+        "stat.h": "c",
+        "errno.h": "c"
+    },
+    "C_Cpp.default.intelliSenseMode": "msvc-x64"
 }
