@@ -62,7 +62,7 @@ static ssize_t globalmem_write(file *filp, const char __user *buf, size_t size, 
 {
     int ret;
     unsigned long p = *ppos;
-    struct globalmem_devp = (struct globalmem_dev *)(filp->private_data);
+    struct globalmem_dev *globalmem_devp = (struct globalmem_dev *)(filp->private_data);
     
     mutex_lock(globalmem_devp->mutex);
 
@@ -121,3 +121,119 @@ static loff_t globalmem_llseek(struct file *filp, loff_t offset, int orig)
     }
     return ret;
 }
+
+static long globalmem_ioctl(struct file *filp, unsinged int cmd, unsigned long arg)
+{
+    long ret;
+    struct globalmem_dev *globalmem_devp = (struct globalmem_dev *)(filp->private_data);
+    switch (cmd)
+    {
+        case GLOBALMEM_MEM_CLEAR:
+            mutex_lock(globalmem_devp->mutex);
+            memset(globalmem_devp->mem, 0,GLOBALMEM_SIZE);
+            mutex_unlock(globalmem_devp->mutex);
+            ret = 0;
+            break;
+    
+        default:
+            ret = -EINVAL;
+            break;
+    }
+    return ret;
+}
+
+static int globalmem_open(struct inode *inode, struct file *filp)
+{
+    struct globalmem_dev *devp = container_of(inode->i_cdev, struct globalmem_dev, cdev);
+    filp->private_data = devp;
+    return 0;
+}
+
+struct int globalmem_release(struct inode *inode, struct file *filp)
+{
+    return 0;
+}
+
+static struct file_operations global_globalmem_ops = 
+{
+    .owner = THIS_MODULE,
+    .open = globalmem_open,
+    .release = globalmem_release,
+    .read = globalmem_read,
+    .write = globalmem_write,
+    .llseek = globalmem_llseek,
+    .unlocked_ioctl = globalmem_ioctl,
+};
+
+static void globalmem_setup_cdev(struct globalmem_dev *devp, int index)
+{
+    dev_t devno = MKDEV(globalmem_major. index);
+    int err;
+    cdev_init(devp->cdev, global_globalmem_ops);
+    devp->cdev.owner = THIS_MODULE;
+    err = cdev_add(devp->cdev, devno, 1);
+    if (err)
+    {
+        printk(KERN_INFO "Error %d adding globalmem", err);
+    }
+}
+
+static int __init globalmem_init(void)
+{
+    int ret;
+    int i;
+
+    dev_t devno = MKDEV(globalmem_major, 0);
+
+    if (globalmem_major)
+    {
+        register_chrdev_region(devno, DEVICE_NUM, "globalmem");
+    }
+    else
+    {
+        ret = alloc_chrdev_region(&devno, DEVICE_NUM, "globalmem");
+        globalmem_major = MAJOR(devno);
+    }
+
+    if (ret < 0)
+    {
+        return ret;
+    }
+
+    global_globalmem_devp = kzalloc(sizeof(sturct globalmem_dev) * DEVICE_NUM, GFP_KERNEL);
+
+    if (!global_globalmem_devp)
+    {
+        unregister_chrdev_region(devno, DEVICE_NUM);
+        ret = -ENOMEM;
+        return ret;
+    }
+
+    for (i = 0; i < DEVICE_NUM; ++i)
+    {
+        globalmem_setup_cdev(global_globalmem_devp + i, i);
+    }
+    return 0;
+}
+
+module_init(globalmem_init);
+
+
+static void __exit globalmem_exit(void)
+{
+    int i;
+    for (i = 0; i < DEVICE_NUM; ++i)
+    {
+        cdev_del(&(global_globalmem_devp + i)->cdev);
+    }
+
+    kfree(global_globalmem_devp);
+    unregister_chrdev_region(MKDEV(globalmem_major, 0), DEVICE_NUM);
+
+}
+
+module_exit(globalmem_exit);
+
+MODULE_LICENSE("GPL");
+MODULE_AUTHOR("Ex-ac ex-ac@outlook.com")
+
