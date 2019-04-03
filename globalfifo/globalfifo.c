@@ -27,6 +27,7 @@ struct globalfifo_dev
     char mem[GLOBALFIFO_SIZE];
     unsigned int current_len;
     struct mutex mutex;
+    struct fasync_struct *async_queue;
     wait_queue_head_t r_wait_queue;
     wait_queue_head_t w_wait_queue;
 };
@@ -141,6 +142,12 @@ static ssize_t globalfifo_write(struct file *filp, const char __user *buff, size
         printk(KERN_INFO "globalfifo: Write %lu byte(s), current_len % u\n", size, devp->current_len);
 
         wake_up_interruptible(&devp->r_wait_queue);
+
+        if (devp->async_queue)
+        {
+            kill_fasync(&devp->async_queue, SIGIO, POLL_IN);
+            printk(KERN_INFO "globalfifo: %s kill SIGIO\n", __func__);
+        }
     }
 
     mutex_unlock(&devp->mutex);
@@ -179,6 +186,12 @@ static long globalfifo_ioctl(struct file *filp, unsigned int cmd, unsigned long 
     return ret;
 }
 
+static int globalfifo_fasync(int fd, struct file *filp, int mode)
+{
+    struct globalfifo_dev *devp = filp->private_data;
+    return fasync_helper(fd, filp, mode, &devp->async_queue);
+}
+
 static int globalfifo_open(struct inode *inode, struct file *filp)
 {
     struct globalfifo_dev *devp = container_of(inode->i_cdev, struct globalfifo_dev, cdev);
@@ -190,7 +203,9 @@ static int globalfifo_open(struct inode *inode, struct file *filp)
 
 static int globalfifo_release(struct inode *inode, struct file *filp)
 {
+    globalfifo_fasync(-1, filp, 0);
     printk(KERN_INFO "globalfifo: Release\n");
+    
     return 0;
 }
 
@@ -219,6 +234,8 @@ static unsigned int globalfifo_poll(struct file *filp, poll_table *wait)
     return ret;
 }
 
+
+
 static const struct file_operations global_globalfifo_ops =
 {
     .owner = THIS_MODULE,
@@ -229,6 +246,7 @@ static const struct file_operations global_globalfifo_ops =
     .llseek = globalfifo_llseek,
     .unlocked_ioctl = globalfifo_ioctl,
     .poll = globalfifo_poll,
+    .fasync = globalfifo_fasync,
 };
 
 static void globalfifo_setup_cdev(struct globalfifo_dev *devp, int index)
