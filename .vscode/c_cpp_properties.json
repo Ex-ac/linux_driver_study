@@ -19,11 +19,11 @@
             "name": "linux",
             "includePath": [
                 "${workspaceFolder}/**",
-                "D:/linux"
+                "/home/ex/source/linux/include"
             ],
             "browse": {
                 "path": [
-                    "D:/linux"
+                    "/home/ex/source/linux/include"
                 ]
             },
             "cStandard": "c11",
