@@ -37,6 +37,7 @@ int main(int argc, char **argv)
         return -1;
     }
 
+    // 用于内部的内存对齐
     ret = posix_memalign((void **)(&buff), 512, (BUFF_SIZE + 1));
     if (ret < 0)
     {
@@ -47,6 +48,7 @@ int main(int argc, char **argv)
 
     memset(buff, 0, BUFF_SIZE + 1);
 
+    // 初始化 io_contex_t，主要是设置最大的事件数
     ret = io_setup(128, &ctx);
     if (ret < 0)
     {
@@ -55,11 +57,12 @@ int main(int argc, char **argv)
         close(fd);
         return -1;
     }
-
+    // 用于控制aio的控制数据块
     io_prep_pread(&cb, fd, buff, BUFF_SIZE, 0);
 
     cbs[0] = &cb;
 
+    // 启动任务
     ret = io_submit(ctx, 1, cbs);
 
     if (ret != 1)
@@ -84,6 +87,8 @@ int main(int argc, char **argv)
         }
     }
 
+
+    // 阻塞
     ret = io_getevents(ctx, 1, 1, events, NULL);
 
     if (ret != 1)

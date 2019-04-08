@@ -57,12 +57,12 @@ static ssize_t globalfifo_read(struct file *filp, char __user *buff, size_t size
 
         schedule();
 
-        // if (signal_pending(current))
-        // {
-        //     remove_wait_queue(&devp->r_wait_queue, &wait);
-        //     __set_current_state(TASK_RUNNING);
-        //     return -ERESTARTSYS;
-        // }
+        if (signal_pending(current))
+        {
+            remove_wait_queue(&devp->r_wait_queue, &wait);
+            __set_current_state(TASK_RUNNING);
+            return -ERESTARTSYS;
+        }
         mutex_lock(&devp->mutex);
     }
 
@@ -116,12 +116,12 @@ static ssize_t globalfifo_write(struct file *filp, const char __user *buff, size
 
         schedule();
 
-        // if (signal_pending(current))
-        // {
-        //     remove_wait_queue(&devp->w_wait_queue, &wait);
-        //     __set_current_state(TASK_RUNNING);
-        //     return -ERESTARTSYS;
-        // }
+        if (signal_pending(current))
+        {
+            remove_wait_queue(&devp->w_wait_queue, &wait);
+            __set_current_state(TASK_RUNNING);
+            return -ERESTARTSYS;
+        }
 
         mutex_lock(&devp->mutex);
     }
