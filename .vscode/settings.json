@@ -5,7 +5,10 @@
         "errno.h": "c",
         "wait.h": "c",
         "poll.h": "c",
-        "libaio.h": "c"
+        "libaio.h": "c",
+        "uaccess.h": "c",
+        "scull.h": "c",
+        "semaphore.h": "c"
     },
-    "C_Cpp.default.intelliSenseMode": "msvc-x64"
+    "C_Cpp.default.intelliSenseMode": "gcc-x64"
 }
