@@ -4,11 +4,11 @@
             "name": "Win32",
             "includePath": [
                 "${workspaceFolder}/**",
-                "D:/linux"
+                "D:/linux/include"
             ],
             "browse": {
                 "path": [
-                    "D:/linux"
+                    "D:/linux/include"
                 ]
             },
             "cStandard": "c11",

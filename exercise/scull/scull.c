@@ -9,7 +9,7 @@
 #include <linux/fcntl.h>
 #include <linux/errno.h>
 #include <linux/stat.h>
-
+#include <linux/proc_fs.h>
 
 int scull_major = SCULL_MAJOR;
 int scull_minor = 0;
@@ -53,6 +53,54 @@ int scull_trim(struct scull_dev *devp)
     devp->data = NULL;
     return 0;
 }
+
+#ifdef SCULL_DEBUG
+
+static int scull_read_procmem(char *buf, char **start, off_t offset, int count, int *eof, void *data)
+{
+    int i, j, len = 0;
+
+    int limit = count - 80; // 防止写入的内容超出一页
+
+    for (i = 0; i < scull_size && len <= limit; ++i)
+    {
+        struct scull_dev *devp = scull_devp + i;
+        struct scull_qset *dptr = devp->data;
+        if (down_interruptible(&devp->semaphore))
+        {
+            return -ERESTARTSYS;
+        }
+        len += sprintf(buf + len, "\nDevice %i: qeset %i, quantum %i, size %li\n", i, devp->qset, devp->quantum, devp->size);
+
+        for (; dptr && len <= limit; dptr = dptr->next)
+        {
+            len += sprintf(buf + len, " item at %p, qset at %p\n", dptr, dptr->data);
+
+            if (dptr->data && !dptr->next)
+            {
+                for (j = 0; j < devp->qset; ++i)
+                {
+                    if (dptr->data + j)
+                    {
+                        len += sprintf(buf + len, "    % 4i: %8p\n", j, *(dptr->data + j));
+                    }
+                }
+            }
+        }
+        up(&devp->semaphore);
+    }
+    *eof = 1;
+    return len;
+}
+
+
+static void scull_create_proc(void)
+{
+    struct proc_dir_entry *entry;
+    proc_create("scullmem", 0, scull_read_procmem, )
+}
+
+#endif
 
 int scull_open(struct inode *inode, struct file *filp)
 {
