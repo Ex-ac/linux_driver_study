@@ -7,7 +7,7 @@
 #include <linux/cdev.h>
 #include <linux/fs.h>
 
-#define SCULL_DEBUG
+// #define SCULL_DEBUG
 
 #undef PRINT_DEBUG
 #ifdef SCULL_DEBUG

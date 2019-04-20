@@ -395,11 +395,11 @@ static void scull_setup_cdev(struct scull_dev *devp, int index)
 
     if (err)
     {
-        printk(KERN_NOTICE "scull: %ld adding error, error code: %ld", index, err);
+        printk(KERN_NOTICE "scull: %ld adding error, error code: %ld\n", index, err);
     }
     else
     {
-        printk(KERN_NOTICE "scull: %ld adding finish", index);
+        printk(KERN_NOTICE "scull: %ld adding finish\n", index);
     }
     
 
@@ -457,21 +457,21 @@ static void __exit scull_exit(void)
     int i;
     dev_t devno = MKDEV(scull_major, scull_minor);
 
-    printk(KERN_WARNING "scull: start exit");
+    printk(KERN_WARNING "scull: start exit\n");
     for (i = 0; i < scull_size; ++i)
     {
         scull_trim(scull_devp + i);
         cdev_del(&(scull_devp + i)->cdev);
-        printk(KERN_WARNING "scull: %d del", i);
+        printk(KERN_WARNING "scull: %d del\n", i);
     }
     kfree(scull_devp);
-    printk(KERN_WARNING "scull: kfree scull_devp");
+    printk(KERN_WARNING "scull: kfree scull_devp\n");
 
-    printk(KERN_WARNING "scull: unregister");
+    printk(KERN_WARNING "scull: unregister\n");
     unregister_chrdev_region(devno, scull_size);
 
 #ifdef SCULL_DEBUG
-    printk(KERN_WARNING "scull: remove proc");
+    printk(KERN_WARNING "scull: remove proc\n");
     scull_remove_proc();
 #endif
 }

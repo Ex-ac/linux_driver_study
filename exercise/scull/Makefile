@@ -1,5 +1,6 @@
 ifeq ($(DEBUG),y)
-	DEBUGFLAGE = -O -g -DSCULL_DEBUG -D__KERNEL__
+	DEBUGFLAGE = -O -g 
+#-DSCULL_DEBUG -D__KERNEL__
 else
 	DEBUGFLAGE = -O2
 endif
