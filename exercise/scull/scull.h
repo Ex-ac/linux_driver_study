@@ -46,6 +46,7 @@ struct scull_qset
     struct scull_qset *next;
 };
 
+
 struct scull_dev
 {
     struct scull_qset *data;
@@ -60,7 +61,7 @@ struct scull_dev
 extern int scull_major;
 extern int scull_size;
 extern int scull_quantum;
-extern int scull_qset;
+extern int scull_qset_size;
 
 
 int scull_trim(struct scull_dev *devp);
@@ -79,11 +80,11 @@ int scull_ioctl(struct file *filp, unsigned int cmd, unsigned long arg);
 
 #define SCULL_IOC_SQUANTUM      _IOW(SCULL_IOC_MAGIC, 1, int)
 #define SCULL_IOC_SQSET         _IOW(SCULL_IOC_MAGIC, 2, int)
-#define SCULL_IOC_TQUANTUM      _IO(SCULL_IOC_MAGIC, 3);
+#define SCULL_IOC_TQUANTUM      _IO(SCULL_IOC_MAGIC, 3)
 #define SCULL_IOC_TQSET         _IO(SCULL_IOC_MAGIC, 4)
 #define SCULL_IOC_GQUANTUM      _IOR(SCULL_IOC_MAGIC, 5, int)
 #define SCULL_IOC_GQSET         _IOR(SCULL_IOC_MAGIC, 6, int)
-#define SCULL_IOC_QQUANTUM      _IO(SCULL_IOC_MAGIC, 7);
+#define SCULL_IOC_QQUANTUM      _IO(SCULL_IOC_MAGIC, 7)
 #define SCULL_IOC_QQSET         _IO(SCULL_IOC_MAGIC, 8)
 #define SCULL_IOC_XQUANTUM      _IOWR(SCULL_IOC_MAGIC, 9, int)
 #define SCULL_IOC_XQSET         _IOWR(SCULL_IOC_MAGIC, 10, int)

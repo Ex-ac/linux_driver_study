@@ -409,7 +409,7 @@ int scull_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
     {
     case SCULL_IOC_RESET:
         scull_quantum = SCULL_QUANTUM;
-        scull_qset = SCULL_QSET;
+        scull_qset_size = SCULL_QSET;
         break;
 
     case SCULL_IOC_SQUANTUM:
@@ -425,15 +425,97 @@ int scull_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
         {
             return -EPERM;
         }
-        ret = __get_user(scull_qset, (int __user *)(arg));
+        ret = __get_user(scull_qset_size, (int __user *)(arg));
         break;
 
     case SCULL_IOC_TQUANTUM:
-        
-    default:
+        if (!capable(CAP_SYS_ADMIN))
+        {
+            return -EPERM;
+        }
+        scull_quantum = arg;
         break;
+    
+    case SCULL_IOC_TQSET:
+        if (!capable(CAP_SYS_ADMIN))
+        {
+            return -EPERM;
+        }
+        scull_qset_size = arg;
+        break;
+
+    case SCULL_IOC_GQUANTUM:
+        if (!capable(CAP_SYS_ADMIN))
+        {
+            return -EPERM;
+        }
+        ret = __put_user(scull_quantum, (int __user *)(arg));
+        break;
+
+    case SCULL_IOC_GQSET:
+        if (!capable(CAP_SYS_ADMIN))
+        {
+            return -EPERM;
+        }
+        ret = __put_user(scull_qset_size, (int __user *)(arg));
+        break;
+
+    case SCULL_IOC_QQUANTUM:
+        return scull_quantum;
+
+    case SCULL_IOC_QQSET:
+        return scull_qset_size;
+
+    case SCULL_IOC_XQUANTUM:
+        if (!capable(CAP_SYS_ADMIN))
+        {
+            return -EPERM;
+        }
+        temp = scull_quantum;
+        ret = __get_user(scull_quantum, (int __user *)(arg));
+        if (ret == 0)
+        {
+            ret = __put_user(temp, (int __user *)(arg));
+        }
+        break;
+
+    case SCULL_IOC_XQSET:
+        if (!capable(CAP_SYS_ADMIN))
+        {
+            return -EPERM;
+        }
+        temp = scull_qset_size;
+        ret = __get_user(scull_qset_size, (int __user *)(arg));
+        if (ret == 0)
+        {
+            ret = __put_user(temp, (int __user *)(arg));
+        }
+        break;
+
+    case SCULL_IOC_HQUANTUM:
+        if (!capable(CAP_SYS_ADMIN))
+        {
+            return -EPERM;
+        }
+        temp = scull_quantum;
+        scull_quantum = arg;
+        return temp;
+
+    case SCULL_IOC_HQSET:
+        if (!capable(CAP_SYS_ADMIN))
+        {
+            return -EPERM;
+        }
+        temp = scull_qset_size;
+        scull_qset_size = arg;
+        return temp;
+
+
+    default:
+        return -ENOTTY;
     }
 
+    return ret;
 }
 
 
@@ -509,6 +591,9 @@ static int __init scull_init(void)
         sema_init(&scull_devp[i].semaphore, 1);
         scull_setup_cdev(scull_devp + i, i);
     }
+
+    printk(KERN_INFO "scull: quantum: %ld, qset: %ld\n", SCULL_IOC_GQUANTUM, SCULL_IOC_GQSET);
+
 #ifdef SCULL_DEBUG
     scull_create_proc();
 #endif
