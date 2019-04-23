@@ -69,11 +69,28 @@ ssize_t scull_read(struct file *filp, char __user *buf, size_t count, loff_t *f_
 ssize_t scull_write(struct file *filp, const char __user *buf, size_t count, loff_t *f_pos);
 
 loff_t scull_llseek(struct file *filp, loff_t offset, int whence);
+int scull_ioctl(struct file *filp, unsigned int cmd, unsigned long arg);
+
 
 #define SCULL_IOC_MAGIC     'k'
+
 #define SCULL_IOC_RESET     _IO(SCULL_IOC_MAGIC, 0)
 
 
+#define SCULL_IOC_SQUANTUM      _IOW(SCULL_IOC_MAGIC, 1, int)
+#define SCULL_IOC_SQSET         _IOW(SCULL_IOC_MAGIC, 2, int)
+#define SCULL_IOC_TQUANTUM      _IO(SCULL_IOC_MAGIC, 3);
+#define SCULL_IOC_TQSET         _IO(SCULL_IOC_MAGIC, 4)
+#define SCULL_IOC_GQUANTUM      _IOR(SCULL_IOC_MAGIC, 5, int)
+#define SCULL_IOC_GQSET         _IOR(SCULL_IOC_MAGIC, 6, int)
+#define SCULL_IOC_QQUANTUM      _IO(SCULL_IOC_MAGIC, 7);
+#define SCULL_IOC_QQSET         _IO(SCULL_IOC_MAGIC, 8)
+#define SCULL_IOC_XQUANTUM      _IOWR(SCULL_IOC_MAGIC, 9, int)
+#define SCULL_IOC_XQSET         _IOWR(SCULL_IOC_MAGIC, 10, int)
+#define SCULL_IOC_HQUANTUM      _IO(SCULL_IOC_MAGIC, 11)
+#define SCULL_IOC_HQSET         _IO(SCULL_IOC_MAGIC, 12)
 
+
+#define SCULL_IOC_MAX           14
 
 #endif

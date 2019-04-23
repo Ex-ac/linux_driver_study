@@ -372,6 +372,72 @@ ssize_t scull_write(struct file *filp, const char __user *buf, size_t count, lof
 }
 
 
+int scull_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
+{
+
+    int ret = 0, temp;
+    int err = 0;
+
+
+    if (_IOC_TYPE(cmd) != SCULL_IOC_MAGIC)
+    {
+        return -ENOTTY;
+    }
+    if (_IOC_NR(cmd) > SCULL_IOC_MAX)
+    {
+        return -ENOTTY;
+    }
+
+
+    if (_IOC_DIR(cmd) == _IOC_READ)
+    {
+        if(!access_ok(VERIFY_READ, (void __user *)(arg), _IOC_SIZE(cmd)))
+        {
+            return -EFAULT;
+        }
+    }
+    if (_IOC_DIR(cmd) == _IOC_WRITE)
+    {
+        if (!access_ok(VERIFY_WRITE, (void __user *)(arg), _IOC_SIZE(cmd)))
+        {
+            return -EFAULT;
+        }
+    }
+
+
+    switch (cmd)
+    {
+    case SCULL_IOC_RESET:
+        scull_quantum = SCULL_QUANTUM;
+        scull_qset = SCULL_QSET;
+        break;
+
+    case SCULL_IOC_SQUANTUM:
+        if (!capable(CAP_SYS_ADMIN))
+        {
+            return -EPERM;
+        }
+        ret = __get_user(scull_quantum, (int __user *)(arg));
+        break;
+    
+    case SCULL_IOC_SQSET:
+        if (!capable(CAP_SYS_ADMIN))
+        {
+            return -EPERM;
+        }
+        ret = __get_user(scull_qset, (int __user *)(arg));
+        break;
+
+    case SCULL_IOC_TQUANTUM:
+        
+    default:
+        break;
+    }
+
+}
+
+
+
 struct file_operations scull_fops  = 
 {
     .owner = THIS_MODULE,
