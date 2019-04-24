@@ -12,7 +12,6 @@
 #include <linux/fs.h>
 #include <linux/fcntl.h>
 
-
 #include <linux/types.h>
 
 #include <linux/proc_fs.h>
@@ -22,7 +21,6 @@
 #include <linux/wait.h>
 
 #include <linux/errno.h>
-
 
 int scullpipe_major = SCULLPIPE_MAGIC;
 module_param(scullpipe_major, int, S_IRUGO);
@@ -34,9 +32,9 @@ int scullpipe_buff_size = SCULLPIPE_BUFF_SIZE;
 module_param(scullpipe_buff_size, int, S_IRUGO);
 
 int scullpipe_size = SCULLPIPE_SIZE;
-module_param(scullpipe_size, int, S_IRUGO); 
+module_param(scullpipe_size, int, S_IRUGO);
 
-struct scullpipe_dev 
+struct scullpipe_dev
 {
     struct cdev cdev;
     int buff_size;
@@ -56,15 +54,13 @@ static int scullpipe_open(struct inode *inode, struct file *filp)
 
     filp->private_data = devp;
 
-
     if (down_interruptible(&devp->semaphore))
     {
         return -ERESTARTSYS;
     }
-    if (dvep->buff == NULL)
-    {   
-        devp->buff = kzalloc(devp->buff_size, GFP_KE
-        );
+    if (devp->buff == NULL)
+    {
+        devp->buff = kzalloc(devp->buff_size, GFP_KERNEL);
         if (devp->buff == NULL)
         {
             up(&devp->semaphore);
@@ -72,21 +68,21 @@ static int scullpipe_open(struct inode *inode, struct file *filp)
             return -ENOMEM;
         }
         devp->r_ptr = devp->w_ptr = devp->buff;
-        ddevp->size = 0;
+        devp->size = 0;
         PRINT_DEBUG("alloc %d byte\n", devp->buff_size);
         up(&devp->semaphore);
-        
     }
+    up(&devp->semaphore);
     return 0;
 }
 
 static int scullpipe_release(struct inode *inode, struct file *filp)
 {
-    struct scullpipe_dev *devp = filp=>private_data;
+    struct scullpipe_dev *devp = filp->private_data;
 
     down(&devp->semaphore);
 
-    if (devp->size == 0)
+    if (devp->size == 0 && devp->buff)
     {
         kfree(devp->buff);
         devp->buff = NULL;
@@ -111,7 +107,7 @@ static ssize_t scullpipe_read(struct file *filp, char __user *buf, size_t count,
     while (devp->size == 0)
     {
         up(&devp->semaphore);
-        
+
         if (filp->f_flags & O_NONBLOCK)
         {
             return -EAGAIN;
@@ -119,7 +115,7 @@ static ssize_t scullpipe_read(struct file *filp, char __user *buf, size_t count,
 
         PRINT_DEBUG("\"%s\" reading: going to sleep\n", current->comm);
 
-        if (wait_event_interruptible(&devp->r_wait, devp->size > 0))
+        if (wait_event_interruptible(devp->r_wait, devp->size > 0))
         {
             return -ERESTARTSYS;
         }
@@ -132,10 +128,10 @@ static ssize_t scullpipe_read(struct file *filp, char __user *buf, size_t count,
 
     if (count > devp->size)
     {
-        count = devp->size; 
+        count = devp->size;
     }
     temp = 0;
-    dptr = devp->r_ptr;    
+    dptr = devp->r_ptr;
     if (count >= devp->buff_size + (devp->buff - devp->r_ptr))
     {
         temp = devp->buff_size + (devp->buff - devp->r_ptr);
@@ -159,15 +155,14 @@ static ssize_t scullpipe_read(struct file *filp, char __user *buf, size_t count,
 
     ret = count;
     devp->r_ptr = dptr + temp;
-    devp->size -= count; 
+    devp->size -= count;
     up(&devp->semaphore);
 
     PRINT_DEBUG("read %d bytes form memory\n", ret);
     wake_up_interruptible(&devp->w_wait);
-   
+
     return ret;
 }
-
 
 static ssize_t scullpipe_write(struct file *filp, const char __user *buf, size_t count, loff_t *pos)
 {
@@ -190,7 +185,7 @@ static ssize_t scullpipe_write(struct file *filp, const char __user *buf, size_t
         }
 
         PRINT_DEBUG("\"%s\" wirte going to sleep\n", current->comm);
-        if (wait_event_interruptible(&devp->w_wait, devp->size < devp->buff_size))
+        if (wait_event_interruptible(devp->w_wait, devp->size < devp->buff_size))
         {
             return -ERESTARTSYS;
         }
@@ -201,16 +196,15 @@ static ssize_t scullpipe_write(struct file *filp, const char __user *buf, size_t
         }
     }
 
-
     if (count > devp->buff_size - devp->size)
     {
         count = devp->buff_size - devp->size;
     }
     temp = 0;
     dptr = devp->w_ptr;
-    if (count >= devp->buff_size - devp->w_ptr + devp->buff_size)
+    if (count >= devp->buff - (devp->w_ptr + devp->buff_size))
     {
-        temp = devp->buff_size - devp->w_ptr + devp->buff_size;
+        temp = devp->buff - (devp->w_ptr + devp->buff_size);
         if (copy_from_user(dptr, buf, temp))
         {
             up(&devp->semaphore);
@@ -236,17 +230,16 @@ static ssize_t scullpipe_write(struct file *filp, const char __user *buf, size_t
     return ret;
 }
 
-static const struct file_operations scullpipe_fops = 
-{
-    .owner = THIS_MODULE,
-    .open = scullpipe_open,
-    .release = scullpipe_release,
-    .write = scullpipe_write,
-    .read = scullpipe_read,
+static const struct file_operations scullpipe_fops =
+    {
+        .owner = THIS_MODULE,
+        .open = scullpipe_open,
+        .release = scullpipe_release,
+        .write = scullpipe_write,
+        .read = scullpipe_read,
 };
 
-
-// proc 
+// proc
 static void *scullpipe_seq_start(struct seq_file *sfilp, loff_t *pos)
 {
     if (*pos >= scullpipe_size || *pos < 0)
@@ -256,9 +249,9 @@ static void *scullpipe_seq_start(struct seq_file *sfilp, loff_t *pos)
     return scullpipe_devp + *pos;
 }
 
-static void *scullpipe_seq_next(struct seq_file *sfilp, loff_t *pos)
+static void *scullpipe_seq_next(struct seq_file *sfilp, void *v, loff_t *pos)
 {
-    *pos ++;
+    *pos++;
     if (*pos >= scullpipe_size || *pos < 0)
     {
         return NULL;
@@ -266,58 +259,63 @@ static void *scullpipe_seq_next(struct seq_file *sfilp, loff_t *pos)
     return scullpipe_devp + *pos;
 }
 
-static void *scullpipe_seq_stop(struct seq_file *sfilp, loff_t *pos)
+static void scullpipe_seq_stop(struct seq_file *sfilp, void *v)
 {
     return NULL;
 }
 
-static int scullpipe_seq_show(struct sqe_file *sfilp, void *v)
+static int scullpipe_seq_show(struct seq_file *sfilp, void *v)
 {
-    struct scullpipe_dev *devp = (struct sullpipe_dev *)(v);
+    struct scullpipe_dev *devp = (struct scullpipe_dev *)(v);
     int i = 0;
     if (down_interruptible(&devp->semaphore))
     {
         return -ERESTARTSYS;
     }
 
-    seq_printf(sfilp, "\nDevice %i, buff_size %d, size %d, buff start at %p, r_ptr %p, w_ptr %p\nData:\n", (scullpipe_devp -devp), devp->buff_size, devp->size, devp->buff, devp->r_ptr, devp->w_ptr);
+    seq_printf(sfilp, "\nDevice %i, buff_size %d, size %d, buff start at %p, r_ptr %p, w_ptr %p\n", (devp - scullpipe_devp), devp->buff_size, devp->size, devp->buff, devp->r_ptr, devp->w_ptr);
 
-    for (; i < devp->buff_size; ++i)
+    if (devp->buff)
     {
-        seq_putc(sfilp, *(devp->buff + i));
+        seq_printf(sfilp, "Data:\n");
+        for (; i < devp->buff_size; ++i)
+        {
+            seq_putc(sfilp, *(devp->buff + i));
+        }
+        seq_printf(sfilp, "\n");
     }
 
     up(&devp->semaphore);
     return 0;
 }
 
-static const struct seq_operations scullpipe_seq_ops = 
-{
-    .start = scullpipe_seq_start,
-    .next = scullpipe_seq_next,
-    .stop = scullpipe_seq_stop,
-    .show = scullpipe_seq_show,
+static const struct seq_operations scullpipe_seq_ops =
+    {
+        .start = scullpipe_seq_start,
+        .next = scullpipe_seq_next,
+        .stop = scullpipe_seq_stop,
+        .show = scullpipe_seq_show,
 };
 
 static int scullpipe_proc_open(struct inode *inode, struct file *filp)
 {
-    return seq_open(filp, scullpipe_seq_ops);
+    return seq_open(filp, &scullpipe_seq_ops);
 }
 
-struct struct file_operations scullpipe_proc_ops = 
-{
-    .owner = THIS_MODULE,
-    .open = scullpipe_proc_open,
-    .release = seq_release,
-    .read = seq_read,
-    .llseek = seq_lseek,
+static const struct file_operations scullpipe_proc_fops =
+    {
+        .owner = THIS_MODULE,
+        .open = scullpipe_proc_open,
+        .release = seq_release,
+        .read = seq_read,
+        .llseek = seq_lseek,
 };
 
 static void scullpipe_creat_proc(void)
 {
-    struct proc_dir_entry *entry = proc_create("scullpipe", 0, NULL, &scullpipe_proc_ops);
+    struct proc_dir_entry *entry = proc_create("scullpipe", 0, NULL, &scullpipe_proc_fops);
 
-    if (entry)
+    if (!entry)
     {
         PRINT_DEBUG("can't create proc file\n");
     }
@@ -332,20 +330,19 @@ static void scullpipe_remove_proc(void)
     remove_proc_entry("scullpipe", NULL);
 }
 
-
 // init and remoeve device
 static int scullpipe_setup_init(struct scullpipe_dev *devp, int index)
 {
-    devno_t devno = MKDEV(scullpipe_major, scullpipe_minor + index);
+    dev_t devno = MKDEV(scullpipe_major, scullpipe_minor + index);
     int ret;
 
     devp->size = 0;
     devp->buff_size = scullpipe_buff_size;
     devp->buff = NULL;
     devp->r_ptr = devp->w_ptr = NULL;
-    sema_init(&devp->semaphore);
+    sema_init(&devp->semaphore, 1);
     init_waitqueue_head(&devp->r_wait);
-    init_waitqueue_head(&devp->r_wait);
+    init_waitqueue_head(&devp->w_wait);
 
     cdev_init(&devp->cdev, &scullpipe_fops);
     devp->cdev.ops = &scullpipe_fops;
@@ -365,7 +362,7 @@ static int scullpipe_setup_init(struct scullpipe_dev *devp, int index)
 static int __init scullpipe_init(void)
 {
     int ret, i;
-    devno_t devno = MKDEV(scullpipe_major, scullpipe_minor);
+    dev_t devno = MKDEV(scullpipe_major, scullpipe_minor);
 
     if (scullpipe_major == 0)
     {
@@ -383,13 +380,13 @@ static int __init scullpipe_init(void)
         PRINT_DEBUG("can't get major %d\n", scullpipe_major);
         return ret;
     }
-    
+
     scullpipe_devp = kzalloc(sizeof(struct scullpipe_dev) * scullpipe_size, GFP_KERNEL);
 
     if (scullpipe_devp == NULL)
     {
         PRINT_DEBUG("not enough memory");
-        return-ENOMEM;
+        return -ENOMEM;
     }
 
     for (i = 0; i < scullpipe_size; ++i)
@@ -411,12 +408,15 @@ static void __exit scullpipe_exit(void)
 
     for (i = 0; i < scullpipe_size; ++i)
     {
-        cdev_del(sculllpipe_devp + i);
-        kfree((scullpipe_devp + i)->buff);
+        cdev_del(&(scullpipe_devp + i)->cdev);
+        if ((scullpipe_devp + i)->buff)
+        {
+           kfree((scullpipe_devp + i)->buff);
+        }
     }
     kfree(scullpipe_devp);
     unregister_chrdev_region(MKDEV(scullpipe_major, scullpipe_minor), scullpipe_size);
-    
+
     scullpipe_devp = NULL;
 }
 
