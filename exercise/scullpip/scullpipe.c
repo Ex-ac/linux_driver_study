@@ -11,6 +11,7 @@
 
 #include <linux/fs.h>
 #include <linux/fcntl.h>
+#include <linux/poll.h>
 
 #include <linux/types.h>
 
@@ -43,6 +44,7 @@ struct scullpipe_dev
     char *r_ptr, *w_ptr;
     struct semaphore semaphore;
     wait_queue_head_t r_wait, w_wait;
+    struct fasync_struct *fasync_queue;
 };
 
 static struct scullpipe_dev *scullpipe_devp;
@@ -160,7 +162,10 @@ static ssize_t scullpipe_read(struct file *filp, char __user *buf, size_t count,
 
     PRINT_DEBUG("read %d bytes form memory\n", ret);
     wake_up_interruptible(&devp->w_wait);
-
+    if (devp->fasync_queue)
+    {
+        kill_fasync(&devp->fasync_queue, SIGIO, POLLIN);
+    }
     return ret;
 }
 
@@ -227,8 +232,42 @@ static ssize_t scullpipe_write(struct file *filp, const char __user *buf, size_t
     PRINT_DEBUG("write %d bytes to memory\n", count);
     wake_up_interruptible(&devp->r_wait);
 
+    if (devp->fasync_queue)
+    {
+        kill_fasync(&devp->fasync_queue, SIGIO, POLL_OUT);
+    }
+    
     return ret;
 }
+
+static unsigned int scullpipe_poll(struct file *filp, poll_table *wait)
+{
+    struct scullpipe_dev *devp = filp->private_data;
+    unsigned int ret;
+
+    down(&devp->semaphore);
+    poll_wait(filp, devp->r_wait, wait);
+    poll_wait(filp, devp->w_wait, wait);
+
+    if (devp->size > 0)
+    {
+        ret |= POLL_IN | POLLRDNORM;
+    }
+    if (devp->size != devp->buff_size)
+    {
+        ret |= POLL_OUT | POLLWRNORM;
+    }
+    
+    up(&devp->semaphore);
+    return ret;
+}
+
+static int scullpipe_fasync(int fd, struct file *filp, int mode)
+{
+    struct scullpipe_dev *dev = filp->private_data;
+    return fasync_helper(fd, filp, mode, &devp->fasync_queue);
+}
+
 
 static const struct file_operations scullpipe_fops =
     {
