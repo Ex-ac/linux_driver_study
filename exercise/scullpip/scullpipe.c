@@ -246,8 +246,8 @@ static unsigned int scullpipe_poll(struct file *filp, poll_table *wait)
     unsigned int ret;
 
     down(&devp->semaphore);
-    poll_wait(filp, devp->r_wait, wait);
-    poll_wait(filp, devp->w_wait, wait);
+    poll_wait(filp, &devp->r_wait, wait);
+    poll_wait(filp, &devp->w_wait, wait);
 
     if (devp->size > 0)
     {
@@ -264,7 +264,7 @@ static unsigned int scullpipe_poll(struct file *filp, poll_table *wait)
 
 static int scullpipe_fasync(int fd, struct file *filp, int mode)
 {
-    struct scullpipe_dev *dev = filp->private_data;
+    struct scullpipe_dev *devp = filp->private_data;
     return fasync_helper(fd, filp, mode, &devp->fasync_queue);
 }
 

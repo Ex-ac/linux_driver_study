@@ -6,7 +6,7 @@ obj-m := faulty.o
 
 else
 
-KERNELRELEASE ?= /lib/modules/$(shell uname -r)/build
+KERNELRELEASE ?= /usr/src/linux-headers-$(shell uname -r)/
 SOURCEPATH := $(CURDIR)
 
 modules:
