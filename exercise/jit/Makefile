@@ -1,4 +1,4 @@
-KERNELRELEASE := /usr/src/linux-headers-$(shell uname -r)/
+KERNELRELEASE := /lib/modules/$(shell uname -r)/build
 SOURCEPATH = $(CURDIR)
 
 obj-m := jit.o

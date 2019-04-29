@@ -14,7 +14,7 @@
 
 #include <linux/interrupt.h>
 
-#include <asm-generic/hardirq.h>
+// #include <asm-generic/hardirq.h>
 
 int delay = HZ;
 module_param(delay, int, S_IRUGO);
@@ -54,14 +54,14 @@ struct jit_tasklet
 static int jit_fn(struct seq_file *sfilp, void *data)
 {
     unsigned long j0, j1;
-    wait_queue_entry_t wait_queue;
+    wait_queue_head_t wait_queue;
 
     init_waitqueue_head(&wait_queue);
 
     j0 = jiffies;
     j1 = j0 + delay;
 
-    switch ((enum jit_types)(*data))
+    switch ((int)*data)
     {
     case JIT_BUSY:
         while (time_before(j0, j1))
@@ -87,7 +87,7 @@ static int jit_fn(struct seq_file *sfilp, void *data)
         set_current_state(TASK_RUNNING);
         break;
     }
-    ji = jiffies;
+    j1 = jiffies;
 
     seq_printf(sfilp, "%9li %9li %9li\n", j0, j1, j1 - j0);
 
@@ -98,10 +98,10 @@ static int jit_fn(struct seq_file *sfilp, void *data)
 
 static int jit_busy_open(struct inode *inode, struct file *filp)
 {
-    return single_open(filp, &jit_fn, JIT_BUSY);
+    return  single_open(filp, &jit_fn, JIT_BUSY);
 }
 
-static int jit_sched_open)struct inode *inode, struct file *filp)
+static int jit_sched_open(struct inode *inode, struct file *filp)
 {
     return single_open(filp, &jit_fn, JIT_SCHED);
 }
@@ -151,7 +151,7 @@ static const struct file_operations schedto_proc_fops =
 
 
 
-static int jit_creent_time(struct seq_file *sfilp, void *data)
+static int jit_current_time(struct seq_file *sfilp, void *data)
 {
     struct timeval tval;
     struct timespec tsp;
@@ -165,7 +165,7 @@ static int jit_creent_time(struct seq_file *sfilp, void *data)
     tsp = current_kernel_time();
 
     seq_printf(sfilp, "0x%08lx 0x%016Lx %10i.%06i\n"
-                    "%40i.%09i\n", j0, j1, (int)(tval.tv_sec), (int)(tval.tv_usec), (int)(tsp.tv_sec), (int)(tsp.nsec));
+                    "%40i.%09i\n", j0, j1, (int)(tval.tv_sec), (int)(tval.tv_usec), (int)(tsp.tv_sec), (int)(tsp.tv_nsec));
     return 0;
 }
 
@@ -185,7 +185,7 @@ static const struct file_operations current_proc_fops =
 
 
 
-static void jit_proc_create()
+static void jit_proc_create(void)
 {
     proc_create("jit_busy", 0, NULL, &busy_proc_fops);
     proc_create("jit_sched", 0, NULL, &sched_proc_fops);
@@ -196,7 +196,7 @@ static void jit_proc_create()
     proc_create("jit_current", 0, NULL, &current_proc_fops);
 }
 
-static void jit_remove_proc_entry()
+static void jit_remove_proc_entry(void)
 {
     remove_proc_entry("jit_busy", NULL);
     remove_proc_entry("jit_sched", NULL);
@@ -217,11 +217,11 @@ static int __init jit_init(void)
 module_init(jit_init);
 
 
-static void __exit jit_eixt(void)
+static void __exit jit_exit(void)
 {
     jit_remove_proc_entry();
 }
 
 module_exit(jit_exit);
 
-MODULE_LICENSE("GPL v2")
+MODULE_LICENSE("GPL v2");
