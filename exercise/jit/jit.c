@@ -79,10 +79,10 @@ static int jit_fn(struct seq_file *sfilp, void *data)
     switch (jit_types)
     {
     case JIT_BUSY:
-    ug    while (time_before(jiffies, j1))
-        {
-            cpu_relax();
-        }
+    while (time_before(jiffies, j1))
+    {
+        cpu_relax();
+    }
 
         break;
     
@@ -344,13 +344,13 @@ struct jit_timer
     char *buf;
 };
 
-static void jit_timer_fn(unsigned long arg)
+static void jit_timer_fn(struct timer_list *timer)
 {
-    struct jit_timer *jit_timer = (struct jit_timer *)(arg);
+    struct jit_timer *jit_timer = container_of(timer, struct jit_timer, timer);
 
     unsigned long j = jiffies;
 
-    jit_timer->buf += sprintf(jit_timer->buf, "%9li  %3li     %i    %6i   %i   %s\n", j, j - jit_timer->prev_jiffies, in_interrupt() ？ 1 : 0, current->pid, smp_processor_id(), current->comm);
+    jit_timer->buf += sprintf(jit_timer->buf, "%9li  %3li     %i    %6i   %i   %s\n", j, j - jit_timer->prev_jiffies, in_interrupt() ? 1 : 0, current->pid, smp_processor_id(), current->comm);
 
     if (--jit_timer->loops)
     {
@@ -383,18 +383,49 @@ static int jit_timer_show(struct seq_file *sfilp, void *data)
     }
 
     init_waitqueue_head(&jit_timer->wait_queue);
-    init_timer_key(&jit_timer->timer, jit_timer_fn, NULL, NULL, NULL);
+    
+    timer_setup(&jit_timer->timer, &jit_timer_fn, TIMER_SOFTIRQ);
 
+    jit_timer->buf = buf;
 
     jit_timer->prev_jiffies = j;
     jit_timer->loops = JIT_ASYNC_LOOPS;
-
+    jit_timer->timer.expires = j + delay;
     
+
+    seq_printf(sfilp, "   time   delta  inirq    pid   cpu command\n");
+    seq_printf(sfilp, "%9li  %3li     %i    %6i   %i   %s\n", j, 0L, in_interrupt() ? 1 : 0, current->pid, smp_processor_id(), current->comm);
+
+    add_timer(&jit_timer->timer);
+
+    wait_event_interruptible(jit_timer->wait_queue, jit_timer->loops == 0);
+
+    if (signal_pending(current))
+    {
+        return -ERESTARTSYS;
+    }
+
+    seq_printf(sfilp, "%s", buf);
+
+    kfree(buf);
+    kfree(jit_timer);
+
+    return 0;
 }
 
+static int jit_timer_open(struct inode *inode, struct file *filp)
+{
+    return single_open(filp, &jit_timer_show, NULL);
+}
 
-
-
+static const struct file_operations jit_timer_ops = 
+{
+    .owner = THIS_MODULE,
+    .open = jit_timer_open,
+    .read = seq_read,
+    .release = single_release,
+    .llseek = seq_lseek,
+};
 
 
 static void jit_proc_create(void)
@@ -409,6 +440,8 @@ static void jit_proc_create(void)
 
     proc_create("jit_tasklet", 0, NULL, &jit_taskle_fops);
     proc_create("jit_tasklet_hi", 0, NULL, &jit_taskle_hi_fops);
+    proc_create("jit_timer", 0, NULL, &jit_timer_ops);
+
     printk(KERN_INFO "jit: create proc\n");
 }
 
@@ -423,6 +456,7 @@ static void jit_remove_proc_entry(void)
 
     remove_proc_entry("jit_tasklet", NULL);
     remove_proc_entry("jit_tasklet_hi", NULL);
+    remove_proc_entry("jit_timer", NULL);
 }
 
 
