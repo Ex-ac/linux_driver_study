@@ -14,6 +14,9 @@
 
 #include <linux/interrupt.h>
 
+#include <linux/sched.h>
+#include <linux/seq_file.h>
+
 // #include <asm-generic/hardirq.h>
 
 int delay = HZ;
@@ -61,7 +64,7 @@ static int jit_fn(struct seq_file *sfilp, void *data)
     j0 = jiffies;
     j1 = j0 + delay;
 
-    switch ((int)*data)
+    switch ((enum jit_types)(data))
     {
     case JIT_BUSY:
         while (time_before(j0, j1))
@@ -78,7 +81,7 @@ static int jit_fn(struct seq_file *sfilp, void *data)
         break;
 
     case JIT_QUEUE:
-        wait_event_interruptible_timeout(&wait_queue, 0, delay);
+        wait_event_interruptible_timeout(wait_queue, 0, delay);
         break;
 
     case JIT_SCHEDTO:
