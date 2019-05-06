@@ -21,6 +21,9 @@
 
 #include <linux/sched/signal.h>
 
+
+#include <linux/workqueue.h>
+
 // #include <asm-generic/hardirq.h>
 
 int delay = HZ;
@@ -427,6 +430,125 @@ static const struct file_operations jit_timer_ops =
     .llseek = seq_lseek,
 };
 
+struct jit_work
+{
+    struct delayed_work work;
+    char *buf;
+    int loops;
+    struct workqueue_struct *work_queue;
+    wait_queue_head_t wait_queue;
+    unsigned long prev_jiffies;
+};
+
+static void jit_workqueue_fn(struct work_struct *work)
+{
+    struct delayed_work *delayed_work = container_of(work, struct delayed_work, work);
+
+    struct jit_work *jit_work = container_of(delayed_work, struct jit_work, work);
+    unsigned long j = jiffies;
+
+    printk(KERN_ALERT "into %s %d\n", __func__, jit_work->loops);
+
+    jit_work->buf += sprintf(jit_work->buf, "%9li  %3li     %i    %6i   %i   %s\n", j, j - jit_work->prev_jiffies, in_interrupt() ? 1 : 0, current->pid, smp_processor_id(), current->comm);
+
+    jit_work->prev_jiffies = j;
+    if (--jit_work->loops)
+    {   
+        printk(KERN_ALERT "queue_delayed_work\n");
+        queue_delayed_work(jit_work->work_queue, &jit_work->work, delay);
+    }
+    else
+    {
+        wake_up_interruptible(&jit_work->wait_queue);
+    }
+    
+}
+
+static int jit_workqueue_show(struct seq_file *sfilp, void *data)
+{
+    struct jit_work *jit_work;
+    unsigned long j = jiffies;
+    char *buf;
+    //DEFINE_WAIT(wait);
+
+
+
+    DECLARE_WAITQUEUE(wait, current);
+
+    printk(KERN_ALERT "into %s\n", __func__);
+    
+    jit_work = kzalloc(sizeof(struct jit_work), GFP_KERNEL);
+    if (!jit_work)
+    {
+        return -ENOMEM;
+    }
+
+    buf = kzalloc(4096, GFP_KERNEL);
+    if (!buf)
+    {
+        return -ENOMEM;
+    }
+
+    printk(KERN_ALERT "init data\n");
+
+    init_waitqueue_head(&jit_work->wait_queue);
+    jit_work->work_queue = create_workqueue("jit_work");
+    // INIT_WORK(&jit_work->work, &jit_workqueue_fn);
+    INIT_DELAYED_WORK(&jit_work->work, jit_workqueue_fn);
+    // jit_work->work.data = jit_work;
+
+    jit_work->buf = buf;
+    jit_work->prev_jiffies = j;
+    jit_work->loops = JIT_ASYNC_LOOPS;
+
+    printk(KERN_ALERT "seq_printf");
+
+    seq_printf(sfilp, "   time   delta  inirq    pid   cpu command\n");
+    seq_printf(sfilp, "%9li  %3li     %i    %6i   %i   %s\n", j, 0L, in_interrupt() ? 1 : 0, current->pid, smp_processor_id(), current->comm);
+
+    printk(KERN_ALERT "init work\n");
+    queue_delayed_work(jit_work->work_queue, &jit_work->work, delay);
+    
+    printk(KERN_ALERT "perpare_to_wait\n");
+    prepare_to_wait(&jit_work->wait_queue, &wait, TASK_INTERRUPTIBLE);
+    
+    printk(KERN_ALERT "schedule\n");
+
+    schedule();
+
+    printk(KERN_ALERT "finish_wait\n");
+    finish_wait(&jit_work->wait_queue, &wait);
+
+    seq_printf(sfilp, "%s", buf);
+
+    if (jit_work->loops != 0)
+    {
+        printk(KERN_ALERT "work quene fun can't work\n");
+        cancel_delayed_work_sync(&jit_work->work);
+    }
+
+    printk(KERN_ALERT "destroy_workqueue\n");
+     
+    destroy_workqueue(jit_work->work_queue);
+
+    kfree(buf);
+    kfree(jit_work);
+
+    return 0;
+}
+
+static int jit_work_open(struct inode *inode, struct file *filp)
+{
+    return single_open(filp, &jit_workqueue_show, NULL);
+}
+
+static const struct file_operations jit_work_fops =
+{
+    .owner = THIS_MODULE,
+    .open = jit_work_open,
+    .read = seq_read,
+    .release = seq_release,
+};
 
 static void jit_proc_create(void)
 {
@@ -441,6 +563,8 @@ static void jit_proc_create(void)
     proc_create("jit_tasklet", 0, NULL, &jit_taskle_fops);
     proc_create("jit_tasklet_hi", 0, NULL, &jit_taskle_hi_fops);
     proc_create("jit_timer", 0, NULL, &jit_timer_ops);
+
+    proc_create("jit_work", 0, NULL, &jit_work_fops);
 
     printk(KERN_INFO "jit: create proc\n");
 }
@@ -457,6 +581,8 @@ static void jit_remove_proc_entry(void)
     remove_proc_entry("jit_tasklet", NULL);
     remove_proc_entry("jit_tasklet_hi", NULL);
     remove_proc_entry("jit_timer", NULL);
+
+    remove_proc_entry("jit_work", NULL);
 }
 
 
