@@ -5,8 +5,10 @@
 #include <linux/ioctl.h>
 #include <linux/kernel.h>
 #include <linux/semaphore.h>
+#include <linux/mutex.h>
 
 
+#define SCULLC_DEBUG
 
 #undef PDEBUG
 #ifdef SCULLC_DEBUG
@@ -35,19 +37,20 @@ struct scullc_qset
 
 struct scullc_dev
 {
-    struct_qset *qset;    
+    struct scullc_qset *qset;    
     int vmas;
     int quantum;
     int qset_size;
     size_t size;
     struct semaphore sem;
     struct cdev cdev;
+    struct mutex mutex;
 };
 
 
 
 extern struct scullc_dev *scullc_devps;
-extern const struct file_operations scullc_fops;
+//extern const struct file_operations scullc_fops;
 
 extern int scullc_major;
 extern int scullc_devs;
@@ -79,3 +82,5 @@ struct scullc_qset *scullc_follow(struct scullc_dev *devp, int n);
 #define SCULLC_IOC_SHIFT_QSET       _IO(SCULLC_IOC_MAGIC, 12)
 
 #define SCULLC_IOC_MAX              12
+
+#endif
