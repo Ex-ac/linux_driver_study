@@ -125,13 +125,13 @@ static int scullc_open(struct inode *inode, struct file *filp)
         //     // return -EINTR wake by signal
         //     return -ERESTARTSYS;
         // }
-        if (mutex_lock_interruptible(&devp->mutex))
+        if (down_interruptible(&devp->sem))
         {
             return -ERESTARTSYS;
         }
         scullc_trim(devp);
-        // mutex_unlock(&devp->mutex);
-        mutex_unlock(&devp->mutex);
+        // up(&devp->sem);
+        up(&devp->sem);
     }
     filp->private_data = devp;
     return 0;
@@ -156,7 +156,7 @@ static ssize_t scullc_read(struct file *filp, char __user *buf, size_t count, lo
     // {
     //     return -ERESTARTSYS;
     // }
-    if (mutex_lock_interruptible(&devp->mutex))
+    if (down_interruptible(&devp->sem))
     {
         return -ERESTART;
     }
@@ -164,8 +164,8 @@ static ssize_t scullc_read(struct file *filp, char __user *buf, size_t count, lo
     if (*pos > devp->size)
     {
         PDEBUG("eof");
-        // mutex_unlock(&devp->mutex);
-        mutex_unlock(&devp->mutex);
+        // up(&devp->sem);
+        up(&devp->sem);
         return 0;
     }
 
@@ -186,8 +186,8 @@ static ssize_t scullc_read(struct file *filp, char __user *buf, size_t count, lo
     if (dptr->data == NULL)
     {
         PDEBUG("not alloc qset memory");
-        // mutex_unlock(&devp->mutex);
-        mutex_unlock(&devp->mutex);
+        // up(&devp->sem);
+        up(&devp->sem);
         return 0;
     }
 
@@ -197,8 +197,8 @@ static ssize_t scullc_read(struct file *filp, char __user *buf, size_t count, lo
         if (*(dptr->data + quan_pos) == NULL)
         {
             PDEBUG("not alloc quantum memory");
-            // mutex_unlock(&devp->mutex);
-            mutex_unlock(&devp->mutex);
+            // up(&devp->sem);
+            up(&devp->sem);
             return 0;
         }
 
@@ -214,8 +214,8 @@ static ssize_t scullc_read(struct file *filp, char __user *buf, size_t count, lo
 
         if (copy_to_user(buf, *(dptr->data + quan_pos) + rest, temp))
         {
-            // mutex_unlock(&devp->mutex);
-            mutex_unlock(&devp->mutex);
+            // up(&devp->sem);
+            up(&devp->sem);
             return -EFAULT;
         }
         rest = 0;
@@ -226,8 +226,8 @@ static ssize_t scullc_read(struct file *filp, char __user *buf, size_t count, lo
 
     *pos += ret;
 
-    // mutex_unlock(&devp->mutex);
-    mutex_unlock(&devp->mutex);
+    // up(&devp->sem);
+    up(&devp->sem);
     return ret;
 }
 
@@ -242,7 +242,7 @@ static ssize_t scullc_write(struct file *filp, const char __user *buf, size_t co
     // {
     //     return -ERESTARTSYS;
     // }
-    if (mutex_lock_interruptible(&devp->mutex))
+    if (down_interruptible(&devp->sem))
     {
         return -ERESTARTSYS;
     }
@@ -258,8 +258,8 @@ static ssize_t scullc_write(struct file *filp, const char __user *buf, size_t co
     if (dptr == NULL)
     {
         PDEBUG("can't alloc qset");
-        // mutex_unlock(&devp->mutex);
-        mutex_unlock(&devp->mutex);
+        // up(&devp->sem);
+        up(&devp->sem);
         return ret;
     }
 
@@ -289,15 +289,15 @@ static ssize_t scullc_write(struct file *filp, const char __user *buf, size_t co
             if (*(dptr->data + quan_pos) == NULL)
             {
                 PDEBUG("can't alloc memery from cache");
-                // mutex_unlock(&devp->mutex);
-                mutex_unlock(&devp->mutex);
+                // up(&devp->sem);
+                up(&devp->sem);
                 return -ENOMEM;
             }
         }
         
         if (copy_from_user(*(dptr->data += quan_pos) + rest, buf, temp))
         {
-            mutex_unlock(&devp->mutex);
+            up(&devp->sem);
             return -EFAULT;
         }
 
@@ -313,7 +313,7 @@ static ssize_t scullc_write(struct file *filp, const char __user *buf, size_t co
     {
         devp->size = *pos;
     }
-    mutex_unlock(&devp->mutex);
+    up(&devp->sem);
     return ret;
 }
 
@@ -486,7 +486,7 @@ static int scullc_seq_show(struct seq_file *sfilp, void *data)
     int i;
 
     // down(&devp->sem);
-    if (mutex_lock_interruptible(&devp->mutex))
+    if (down_interruptible(&devp->sem))
     {
         return -ERESTARTSYS;
     }
@@ -507,8 +507,8 @@ static int scullc_seq_show(struct seq_file *sfilp, void *data)
         }
         dptr = dptr->next;
     }
-    // mutex_unlock(&devp->mutex);
-    mutex_unlock(&devp->mutex);
+    // up(&devp->sem);
+    up(&devp->sem);
     return 0;
 }
 
