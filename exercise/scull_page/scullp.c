@@ -33,7 +33,7 @@ struct scullp_dev *scullp_devps;
 int scullp_trim(struct scullp_dev *devp)
 {
     int i;
-    struct scullp_qset *dptr　= devp->qset, next;
+    struct scullp_qset *dptr = devp->qset, *next;
 
     for (; dptr; dptr = next)
     {
@@ -71,7 +71,7 @@ struct scullp_qset *scullp_follow(struct scullp_dev *devp, int index, int dir)
             return NULL;
         }
 
-        dptr = kzalloc(sizeof(struct scullp_qset), GFP_KERNEL);
+        devp->qset = dptr = kzalloc(sizeof(struct scullp_qset), GFP_KERNEL);
         if (dptr == NULL)
         {
             return NULL;
@@ -174,10 +174,6 @@ static ssize_t scullp_read(struct file *filp, char __user *buf, size_t count, lo
     {
         ret = count;
         *pos += count;
-        if (*pos > devp->size)
-        {
-            devp->szie = *pos;
-        }
     }
     
     up(&devp->sem);
@@ -235,7 +231,7 @@ static ssize_t scullp_write(struct file *filp, const char __user *buf, size_t co
 
     if (count > PAGE_SIZE << devp->order - rest)
     {
-        coutn = PAGE_SIZE << devp->order - rest;
+        count = PAGE_SIZE << devp->order - rest;
     }
 
     if (copy_from_user(*(dptr->data + order_pos) + rest, buf, count))
@@ -246,6 +242,11 @@ static ssize_t scullp_write(struct file *filp, const char __user *buf, size_t co
     {
         ret = count;
         *pos += count;
+
+        if (*pos > devp->size)
+        {
+            devp->size = *pos;
+        }
     }
     up(&devp->sem);
     return ret;
@@ -260,7 +261,7 @@ static loff_t scullp_lseek(struct file *filp, loff_t offset, int whence)
     {
         case 0:
             ret = offset;
-            break
+            break;
         case 1:
             ret = filp->f_pos + offset;
             break;
@@ -277,7 +278,7 @@ static loff_t scullp_lseek(struct file *filp, loff_t offset, int whence)
     {
         return -EINVAL;
     }
-    filp->f_ops = ret;
+    filp->f_pos = ret;
     return ret;
 }
 
@@ -381,7 +382,7 @@ static const struct file_operations scullp_fops =
     .release = scullp_release,
     .read = scullp_read,
     .write = scullp_write,
-    .llseek = scullp_release,
+    .llseek = scullp_lseek,
     .unlocked_ioctl = scullp_ioctl,
 };
 
@@ -389,6 +390,7 @@ static const struct file_operations scullp_fops =
 
 static void *scullp_seq_start(struct seq_file *sfilp, loff_t *pos)
 {
+    seq_printf(sfilp, "scullp proc start\n");
     if (*pos < 0 || *pos >= scullp_devices_size)
     {
         return NULL;
@@ -398,6 +400,7 @@ static void *scullp_seq_start(struct seq_file *sfilp, loff_t *pos)
 
 static void *scullp_seq_next(struct seq_file *sfilp, void *data, loff_t *pos)
 {
+    seq_printf(sfilp, "scullp proc next\n");
     *pos ++;
 
     if (*pos < 0 || *pos >= scullp_devices_size)
@@ -415,15 +418,17 @@ static void scullp_seq_stop(struct seq_file *sfilp, void *data)
 static int scullp_seq_show(struct seq_file *sfilp, void *data)
 {
     struct scullp_dev *devp = (struct scullp_dev *)(data);
-    struct scullp_qset = devp->qset;
+    struct scullp_qset *dptr= devp->qset;
+    int i;
+    char str[81] = {0,0};
 
     if (down_interruptible(&devp->sem))
     {
         return -ERESTARTSYS;
     }
 
-    seq_printf(sfilp, "Device %li, size %ld, qset size %d, order %d\n", devp - scullc_devps, devp->size, devp->qset_size, devp->order);
-    
+    seq_printf(sfilp, "Device %li, size %ld, qset size %d, order %d\n", devp - scullp_devps, devp->size, devp->qset_size, devp->order);
+    memset(str, '*', 80);
     seq_printf(sfilp, "Detail:\n");
     while (dptr)
     {
@@ -433,7 +438,8 @@ static int scullp_seq_show(struct seq_file *sfilp, void *data)
             if (*(dptr->data + i))
             {
                 seq_printf(sfilp, "\t\t%d: start at %p\n", i, *(dptr->data + i));
-                seq_printf(sfilp, "\t\t%s\n", *(dptr->data) + i);
+                seq_printf(sfilp, "%s\n", str);
+                seq_printf(sfilp, "%s\n", *(dptr->data + i));
             }
         }
         dptr = dptr->next;
@@ -460,7 +466,7 @@ static const struct file_operations scullp_proc_fops =
 {
     .owner = THIS_MODULE,
     .open = scullp_proc_open,
-    .release = seq_read,
+    .release = seq_release,
     .read = seq_read,
     .llseek = seq_lseek,
 };
@@ -485,7 +491,7 @@ static void scullp_setup_init(struct scullp_dev *devp, int index)
 {
     dev_t devno = MKDEV(scullp_major, index);
 
-    sema_init(&devp->sem);
+    sema_init(&devp->sem, 1);
     devp->order = scullp_order;
     devp->qset_size = scullp_qset_size;
     cdev_init(&devp->cdev, &scullp_fops);
@@ -504,7 +510,7 @@ static int __init scullp_init(void)
 
     if (scullp_major)
     {
-        ret = register_chrdev_region(devno, scullp_dev, "scullp");
+        ret = register_chrdev_region(devno, scullp_devices_size, "scullp");
     }
     else
     {

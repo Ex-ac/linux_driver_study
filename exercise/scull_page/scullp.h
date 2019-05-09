@@ -12,7 +12,7 @@
 #undef PDEBUG
 #ifdef SCULLP_DEBUG
 #   ifdef __KERNEL__
-#       define PDEBUG(fmt. args...) printk(KERN_INFO "scullp: " fmt, ## args)
+#       define PDEBUG(fmt, args...) printk(KERN_INFO "scullp: " fmt, ## args)
 #   else
 #       define PDEBUG(fmt, args...) fprintf(stderr, fmt, ## args)
 #   endif
