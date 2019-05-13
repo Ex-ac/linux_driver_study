@@ -16,6 +16,7 @@
 #include <linux/mm.h>
 #include <linux/iomap.h>
 #include <linux/uaccess.h>
+#include <asm-generic/io.h>
 
 static int silly_major = 0;
 module_param(silly_major, int, S_IRUGO);
@@ -101,7 +102,7 @@ static ssize_t silly_read(struct file *filp, char __user *buf, size_t count, lof
         case M_16:
             while (count >= 2)
             {
-                *((uint_16 *)(p)) = ioread16(add);
+                *((uint16_t *)(ptr)) = ioread16(add);
                 count -= 2;
                 add += 2;
                 ptr += 2;
@@ -111,7 +112,7 @@ static ssize_t silly_read(struct file *filp, char __user *buf, size_t count, lof
         case M_32:
             while (count >= 4)
             {
-                *((uint32_t *)(p)) = ioread32(add);
+                *((uint32_t *)(ptr)) = ioread32(add);
                 count -= 4;
                 add += 4;
                 ptr += 4;
@@ -166,7 +167,7 @@ static ssize_t silly_write(struct file *filp, const char __user *buf, size_t cou
     }
     ptr = kbuf;
 
-    if (copy_from_user(kbuf, buf, size))
+    if (copy_from_user(kbuf, buf, count))
     {
         kfree(kbuf);
         return -EFAULT;
@@ -200,7 +201,7 @@ static ssize_t silly_write(struct file *filp, const char __user *buf, size_t cou
     case M_16:
         while (count > 2)
         {
-            iowrite16(*((uint_16 *)(ptr)), add);
+            iowrite16(*((uint16_t *)(ptr)), add);
             ptr += 2;
             add += 2;
             count -= 2;
@@ -252,6 +253,7 @@ static int __init silly_init(void)
     dev_t devno = MKDEV(silly_major, 0);
     int ret;
 
+
     if (silly_major)
     {
         ret = register_chrdev_region(devno, 1, "silly");
@@ -261,12 +263,14 @@ static int __init silly_init(void)
         ret = alloc_chrdev_region(&devno, 0, 1, "silly");
         silly_major = MAJOR(devno);
     }
+     
 
     if (ret < 0)
     {
         printk(KERN_INFO "silly: can't register char device\n");
         return ret;
     }
+    printk(KERN_INFO "silly: register char device\n");
 
     global_silly_devp = kzalloc(sizeof(struct silly_dev), GFP_KERNEL);
 
@@ -275,20 +279,24 @@ static int __init silly_init(void)
         unregister_chrdev_region(devno, 1);
         return -ENOMEM;
     }
+    printk(KERN_INFO "silly: alloc mem\n");
 
-    global_silly_devp->silly_resource = request_mem_region(ISA_BASE, ISA_MAX);
-    if (global_silly_devp->silly_resource == NULL)
-    {
-        unregister_chrdev_region(devno, 1);
-        kfree(global_silly_devp);
-        return -EFAULT;
-    }
+    // global_silly_devp->silly_resource = request_mem_region(ISA_BASE, ISA_MAX, "silly");
+    // if (global_silly_devp->silly_resource == NULL)
+    // {
+    //     printk(KERN_INFO "silly: can't request mem region\n");
+    //     unregister_chrdev_region(devno, 1);
+    //     kfree(global_silly_devp);
+    //     return -EFAULT;
+    // }
+    // printk(KERN_INFO "silly: request mem region\n");
 
     io_base = ioremap(ISA_BASE, ISA_MAX);
+    printk(KERN_INFO "silly: ioremap mem\n");
 
-    cdev_init(&global_silly_devp->cdev, &silly_ops);
-    ret = global_silly_devp->cdev.owner = THIS_MODULE;
-
+    cdev_init(&global_silly_devp->cdev, &silly_fops);
+    global_silly_devp->cdev.owner = THIS_MODULE;
+    ret = cdev_add(&global_silly_devp->cdev, devno, 1);
 
     return ret;
 }
@@ -301,9 +309,11 @@ static void __exit silly_exit(void)
     cdev_del(&global_silly_devp->cdev);
     unregister_chrdev_region(MKDEV(silly_major, 0), 1);
     iounmap(io_base);
-    release_mem_region(ISA_BASE, ISA_MAX);
+    // release_mem_region(ISA_BASE, ISA_MAX);
 
     kfree(global_silly_devp);
 }
 
 module_exit(silly_exit);
+
+MODULE_LICENSE("GPL v2");

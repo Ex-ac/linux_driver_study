@@ -5,5 +5,5 @@ obj-m += silly.o
 build:
 	make -C $(KERNEK_DIR) M=$(CURDIR) modules
 
-clean
+clean:
 	make -C $(KERNEK_DIR) M=$(CURDIR) clean
