@@ -23,11 +23,12 @@
 
 #define GPIO_PIN_(x) (uint32_t)(0x01 << ((x) % 32))
 
+
 #undef PRINT_INFO
 #ifdef __KERNEL___
-#define PRINT_INFO(fmt, args...) printk(KERN_INFO "raspberry gpio: " fmt, ##args)
-#elif
-#define PRINT_INFO(fmt, args...) printf(std)
+#   define PRINT_INFO(fmt, args...) printk(KERN_INFO "raspberry gpio: " fmt, ##args)
+#else
+#   define PRINT_INFO(fmt, args...) printf(std)
 #endif
 
 #define RASP_GPIO_SIZE      53
@@ -68,6 +69,22 @@ typedef enum
     GPIO_DETECT_TYPE_ASYNC_FALLING = 0x01 << 6,
 } GPIO_DETECT_TYPE;
 
+struct rasp_gpio_pin
+{
+    bool detect_enable;
+    bool pull_enable;
+    uint8_t detect_type,;
+    uint8_t status;
+    uint8_t io_type;
+};
+
+struct rasp_gpio_dev
+{
+    uint8_t pull_type;
+    struct rasp_gpio_pin *pins;
+    struct cdev cdev;
+};
+
 extern void __iomem *gpio_base;
 
 #define RASP_GPIO_IOC_ARGS(index, value) (unsigned long)(value << 8 | index)
@@ -78,7 +95,7 @@ extern void __iomem *gpio_base;
 #define RASP_GPIO_IOC_GET_IO_TYPE _IO(RASP_GPIO_IOC_MAGIC, 2)
 
 #define RASP_GPIO_IOC_SET_DETECT _IO(RASP_GPIO_IOC_MAGIC, 3)
-#define RASP_GPIO_IOC_GET_IO_TYPE _IO(RASP_GPIO_IOC_MAGIC, 4)
+#define RASP_GPIO_IOC_GET_DETECT _IO(RASP_GPIO_IOC_MAGIC, 4)
 
 #define RASP_GPIO_IOC_SET_RISING _IO(RASP_GPIO_IOC_MAGIC, 5)
 #define RASP_GPIO_IOC_GET_RISING _IO(RASP_GPIO_IOC_MAGIC, 6)
@@ -108,8 +125,8 @@ extern void __iomem *gpio_base;
 #define RASP_GPIO_IOC_CLEAR_BIT _IO(RASP_GPIO_IOC_MAGIC, 22)
 #define RASP_GPIO_IOC_GET_LEVEL _IO(RASP_GPIO_IOC_MAGIC), 23)
 
-#define RASP_GPIO_IOC_USE_GPIO  _IO(RASP_GPIO_IOC_MAGIC, 24)
-#define RASP_GPIO_IOC_UNUSE_GPIO _IO(RASP_GPIO_IOC_MAGIC, 25)
+#define RASP_GPIO_IOC_SET_STATUS  _IO(RASP_GPIO_IOC_MAGIC, 24)
+#define RASP_GPIO_IOC_GET_STATUS _IO(RASP_GPIO_IOC_MAGIC, 25)
 
 #define RASP_GPIO_IOC_MAX   26
 

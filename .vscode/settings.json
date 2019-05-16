@@ -12,7 +12,9 @@
         "proc_fs.h": "c",
         "fs.h": "c",
         "ioctl.h": "c",
-        "scullpipe.h": "c"
+        "scullpipe.h": "c",
+        "mm.h": "c",
+        "io.h": "c"
     },
     "C_Cpp.default.intelliSenseMode": "gcc-x64"
 }
