@@ -1,7 +1,7 @@
-CONFIG_MODULE_SIG_ALL=y 
+
 KERNEL_DIR = /usr/src/linux-headers-$(shell uname -r)/
 
-obj-m += raspberry_gpio.o
+obj-m += gpio.o
 
 build:
 	make -C $(KERNEL_DIR) M=$(CURDIR) modules

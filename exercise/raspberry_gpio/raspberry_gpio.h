@@ -5,6 +5,8 @@
 #include <linux/fcntl.h>
 #include <linux/types.h>
 
+#include <linux/cdev.h>
+
 #define GPIO_BASE 0x00200000          // base offset
 #define GPIO_FSEL_BASE 0x00200000     // function setting
 #define GPIO_SET_BASE 0x0020001C      // set bit
@@ -23,12 +25,13 @@
 
 #define GPIO_PIN_(x) (uint32_t)(0x01 << ((x) % 32))
 
+// #define __KERNEL__
 
 #undef PRINT_INFO
-#ifdef __KERNEL___
+#ifdef __KERNEL__
 #   define PRINT_INFO(fmt, args...) printk(KERN_INFO "raspberry gpio: " fmt, ##args)
 #else
-#   define PRINT_INFO(fmt, args...) printf(std)
+#   define PRINT_INFO(fmt, args...) fprintf(stderr, fmt, ## args)
 #endif
 
 #define RASP_GPIO_SIZE      53
@@ -38,6 +41,7 @@ typedef enum
     GPIO_STATUS_USEING,
     GPIO_STATUS_UNAVAILABLE,
 } GPIO_STATUS;
+
 typedef enum
 {
     GPIO_IO_TYPE_DEFAULT = 0x00,
@@ -73,7 +77,7 @@ struct rasp_gpio_pin
 {
     bool detect_enable;
     bool pull_enable;
-    uint8_t detect_type,;
+    uint8_t detect_type;
     uint8_t status;
     uint8_t io_type;
 };
@@ -103,27 +107,27 @@ extern void __iomem *gpio_base;
 #define RASP_GPIO_IOC_SET_FALLING _IO(RASP_GPIO_IOC_MAGIC, 7)
 #define RASP_GPIO_IOC_GET_FALLING _IO(RASP_GPIO_IOC_MAGIC, 8)
 
-#define RASP_GPIO_IOC_SET_HIGHT _IOW(RASP_GPIO_IOC_MAGIC, 9)
+#define RASP_GPIO_IOC_SET_HIGHT _IO(RASP_GPIO_IOC_MAGIC, 9)
 #define RASP_GPIO_IOC_GET_HIGHT _IO(RASP_GPIO_IOC_MAGIC, 10)
 
-#define RASP_GPIO_IOC_SET_LOW _IOW(RASP_GPIO_IOC_MAGIC, 11)
+#define RASP_GPIO_IOC_SET_LOW _IO(RASP_GPIO_IOC_MAGIC, 11)
 #define RASP_GPIO_IOC_GET_LOW _IO(RASP_GPIO_IOC_MAGIC, 12)
 
-#define RASP_GPIO_IOC_SET_A_RISING _IOW(RASP_GPIO_IOC_MAGIC, 13)
+#define RASP_GPIO_IOC_SET_A_RISING _IO(RASP_GPIO_IOC_MAGIC, 13)
 #define RASP_GPIO_IOC_GET_A_RISING _IO(RASP_GPIO_IOC_MAGIC, 14)
 
-#define RASP_GPIO_IOC_SET_A_FALLING _IOW(RASP_GPIO_IOC_MAGIC, 15)
+#define RASP_GPIO_IOC_SET_A_FALLING _IO(RASP_GPIO_IOC_MAGIC, 15)
 #define RASP_GPIO_IOC_GET_A_FALLING _IO(RASP_GPIO_IOC_MAGIC, 16)
 
 #define RASP_GPIO_IOC_SET_PULL_TYPE _IO(RASP_GPIO_IOC_MAGIC, 17)
 #define RASP_GPIO_IOC_GET_PULL_TYPE _IO(RASP_GPIO_IOC_MAGIC, 18)
 
-#define RASP_GPIO_IOC_SET_PULL _IOW(RASP_GPIO_IOC_MAGIC, 19)
+#define RASP_GPIO_IOC_SET_PULL _IO(RASP_GPIO_IOC_MAGIC, 19)
 #define RASP_GPIO_IOC_GET_PULL _IO(RASP_GPIO_IOC_MAGIC, 20)
 
 #define RASP_GPIO_IOC_SET_BIT _IO(RASP_GPIO_IOC_MAGIC, 21)
 #define RASP_GPIO_IOC_CLEAR_BIT _IO(RASP_GPIO_IOC_MAGIC, 22)
-#define RASP_GPIO_IOC_GET_LEVEL _IO(RASP_GPIO_IOC_MAGIC), 23)
+#define RASP_GPIO_IOC_GET_LEVEL _IO(RASP_GPIO_IOC_MAGIC, 23)
 
 #define RASP_GPIO_IOC_SET_STATUS  _IO(RASP_GPIO_IOC_MAGIC, 24)
 #define RASP_GPIO_IOC_GET_STATUS _IO(RASP_GPIO_IOC_MAGIC, 25)
