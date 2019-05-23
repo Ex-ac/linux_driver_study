@@ -21,6 +21,8 @@
 
 #include <linux/io.h>
 
+#include <linux/delay.h>
+#include <linux/interrupt.h>
 
 static int rasp_gpio_major = 0;
 module_param(rasp_gpio_major, int, S_IRUGO);
@@ -629,13 +631,66 @@ static void rasp_gpio_proc_remove(void)
     remove_proc_entry("rasp_gpio", NULL);
 }
 
-static void timer_fun(struct timer_list *timer)
+
+static void timer_fn(struct timer_list *timer)
 {
+    static unsigned int i = 0;
+
     PRINT_INFO("gpio pin 2, 4 will change status");
-    
+
+    if (i % 2 == 0)
+    {
+        gpio_set_bit(2);
+        gpio_clear_bit(4);
+    }
+    else
+    {
+        gpio_clear_bit(2);
+        gpio_set_bit(4);
+    }
+
+    i ++;
+
+    timer->expires = jiffies + HZ;
+
+    add_timer(timer);    
 }
 
+static struct timer_list global_timer;
 
+static int kernel_probe(int count)
+{
+    int irq = 0;
+
+    gpio_set_bit(2);
+    mdelay(1);
+    do 
+    {
+        unsigned long mask = probe_irq_on();
+        gpio_clear_bit(2);
+        mdelay(1);
+        irq = probe_irq_off(mask);
+
+        if (irq == 0)
+        {
+            PRINT_INFO("no irq reported by probe\n");
+            irq = -1;
+        }
+        gpio_set_bit(2);
+        mdelay(1);
+        count --;
+    } while (count > 0 && irq < 0);
+
+    return irq;
+}
+
+int rasp_riq;
+
+irqreturn_t rasp_gpio_probing(int irq, void *dev_id, struct pt_regs *regs)
+{
+    PRINT_INFO("into to the interrupt\n");
+    return IRQ_HANDLED;
+}
 static int __init rasp_gpio_init(void)
 {
     int ret;
@@ -727,6 +782,7 @@ static int __init rasp_gpio_init(void)
     gpio_set_status(3, GPIO_STATUS_USEING);
     gpio_set_status(4, GPIO_STATUS_USEING);
 
+
     gpio_set_io_type(2, GPIO_IO_TYPE_OUT);
     gpio_set_io_type(3, GPIO_IO_TYPE_IN);
     gpio_set_io_type(4, GPIO_IO_TYPE_OUT);
@@ -734,10 +790,28 @@ static int __init rasp_gpio_init(void)
     gpio_set_bit(2);
     gpio_set_bit(4);
 
-    gpio_clear_bit(4);
-    gpio_set_io_type(2, GPIO_IO_TYPE_OUT);
-    gpio_clear_bit(3);
-    gpio_clear_bit(2);;
+    gpio_detect_enable(3);
+    gpio_detect_falling_enable(3);
+
+    rasp_irq = kernel_probe(10);
+
+    if (rasp_riq < 0)
+    {
+        PRINT_INFO("can't find the irq port\n");
+    }
+    else
+    {
+        ret = request_irq(rasp_irq, rasp_gpio_probing, SA_INTERRUPT, "rasp gpio", NULL);
+        if (ret == 0)
+        {
+            PRINT_INFO("request irq successed\n");
+        }
+        ret = 0;
+    }
+
+    timer_setup(&global_timer, &timer_fn, TIMER_SOFTIRQ);
+    global_timer.expires = jiffies + HZ;
+    add_timer(&global_timer);
 
     return ret;
 }
@@ -746,6 +820,13 @@ module_init(rasp_gpio_init);
 
 static void __exit rasp_gpio_exit(void)
 {
+
+    del_timer_sync(&global_timer);
+    if (rasp_irq > 0)
+    {
+        free_irq(rasp_irq);
+    }
+
     rasp_gpio_proc_remove();
 
     unregister_chrdev_region(MKDEV(rasp_gpio_major, 0), 1);
