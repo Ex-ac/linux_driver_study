@@ -827,6 +827,8 @@ static void __exit rasp_gpio_exit(void)
         free_irq(rasp_irq);
     }
 
+    INIT_WORK()
+    PREPARE_WORK()
     rasp_gpio_proc_remove();
 
     unregister_chrdev_region(MKDEV(rasp_gpio_major, 0), 1);
