@@ -99,6 +99,7 @@ inline void _gpio_set_bits(uint32_t pins, uint32_t offset)
     void __iomem *addr = gpio_base + (uint32_t)(offset - GPIO_BASE);
     PRINT_INFO("offset: 0x%x\n", offset - GPIO_BASE);
     iowrite32(pins, addr);
+    barrier();
 }
 
 inline uint32_t _gpio_get_bits(uint32_t offset)
@@ -186,6 +187,7 @@ do  \
        temp &= (!GPIO_PIN_(index));    \
     }   \
     iowrite32(temp, addr);  \
+    barrier();  \
 } while (0)
 
 
@@ -593,12 +595,12 @@ static int rasp_gpio_seq_show(struct seq_file *sfilp, void *data)
     PRINT_INFO("virtual address: 0x%x\n", gpio_base);
     volatile uint32_t temp;
     void __iomem *addr;
-
+    
     for (; i < GPIO_BASE_LAST; i += 4)
     {   
         addr = gpio_base + (i - GPIO_BASE);
         temp = ioread32(addr);
-        seq_printf(sfilp, "\toffset: 0x%x\tvirtual addr: %p\tvalue: %p\n", virt_to_phys(addr), addr, temp);
+        seq_printf(sfilp, "\toffset: 0x%x\tvalue: %p\n", i, temp);
     }
 
     return 0;
@@ -626,6 +628,13 @@ static void rasp_gpio_proc_remove(void)
 {
     remove_proc_entry("rasp_gpio", NULL);
 }
+
+static void timer_fun(struct timer_list *timer)
+{
+    PRINT_INFO("gpio pin 2, 4 will change status");
+    
+}
+
 
 static int __init rasp_gpio_init(void)
 {
@@ -714,17 +723,18 @@ static int __init rasp_gpio_init(void)
 
     
 
-    // gpio_set_status(2, GPIO_STATUS_USEING);
-    // gpio_set_status(3, GPIO_STATUS_USEING);
-    // gpio_set_status(4, GPIO_STATUS_USEING);
+    gpio_set_status(2, GPIO_STATUS_USEING);
+    gpio_set_status(3, GPIO_STATUS_USEING);
+    gpio_set_status(4, GPIO_STATUS_USEING);
 
-    // gpio_set_io_type(2, GPIO_IO_TYPE_OUT);
-    // gpio_set_io_type(3, GPIO_IO_TYPE_OUT);
-    // gpio_set_io_type(4, GPIO_IO_TYPE_OUT);
+    gpio_set_io_type(2, GPIO_IO_TYPE_OUT);
+    gpio_set_io_type(3, GPIO_IO_TYPE_IN);
+    gpio_set_io_type(4, GPIO_IO_TYPE_OUT);
 
-    // gpio_set_bit(2);
-    // gpio_set_bit(3);
-    // gpio_clear_bit(4);
+    gpio_set_bit(2);
+    gpio_set_bit(4);
+
+    gpio_clear_bit(4);
     gpio_set_io_type(2, GPIO_IO_TYPE_OUT);
     gpio_clear_bit(3);
     gpio_clear_bit(2);;
