@@ -4,12 +4,10 @@
             "name": "Win32",
             "includePath": [
                 "${workspaceFolder}/**",
-                "D:/linux/include",
-                "D:/linux/"
+                "D:/linux/include/**"
             ],
             "browse": {
                 "path": [
-                    "D:/linux/include",
                     "D:/linux/"
                 ]
             },
@@ -21,20 +19,34 @@
             "name": "linux",
             "includePath": [
                 "${workspaceFolder}/**",
-                "/home/ex/source/linux/include",
-                "/home/ex/source/linux"
+                "/home/ex/Sources/linux/include/**"
             ],
             "browse": {
                 "path": [
-                    "/home/ex/source/linux/include",
-                    "/home/ex/source/linux"
+                    "/home/ex/Sources/linux/**"
                 ]
             },
             "cStandard": "c11",
             "cppStandard": "c++17",
             "intelliSenseMode": "gcc-x64",
             "compilerPath": "/usr/bin/gcc"
-        }
+		},
+		{
+			"name": "ITOP-4412",
+			"includePath": [
+				"${workspaceFolder}/**",
+				"/home/ex/Sources/ITOP-4412/include/**"
+			],
+			"browse": {
+				"path": [
+					"/home/ex/Sources/ITOP-4412/**"
+				]
+			},
+			"defines": [
+				"__KERNEL__"
+			],
+			"compilerPath": "/usr/local/arm/arm-2009q3/bin/arm-none-linux-gnueabi-gcc"
+		}
     ],
     "version": 4
 }
