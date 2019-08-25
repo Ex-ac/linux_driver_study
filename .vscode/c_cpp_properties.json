@@ -19,11 +19,12 @@
             "name": "linux",
             "includePath": [
                 "${workspaceFolder}/**",
-                "/home/ex/Sources/linux/include/**"
+                "${env:SOURCES}/linux/include/**"
             ],
             "browse": {
                 "path": [
-                    "/home/ex/Sources/linux/**"
+					"${env:SOURCES}/linux/**",
+                    "${env:SOURCES}/linux/**"
                 ]
             },
             "cStandard": "c11",
@@ -35,11 +36,11 @@
 			"name": "ITOP-4412",
 			"includePath": [
 				"${workspaceFolder}/**",
-				"/home/ex/Sources/ITOP-4412/include/**"
+				"${env:SOURCES}/ITOP-4412/include/**"
 			],
 			"browse": {
 				"path": [
-					"/home/ex/Sources/ITOP-4412/**"
+					"${env:SOURCES}/ITOP-4412/**"
 				]
 			},
 			"defines": [
