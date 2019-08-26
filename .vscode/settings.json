@@ -17,7 +17,8 @@
 		"io.h": "c",
 		"gpio-exynos4.h": "c",
 		"gpio.h": "c",
-		"gpio-cfg.h": "c"
+		"gpio-cfg.h": "c",
+		"memory.h": "c"
 	},
     "C_Cpp.default.intelliSenseMode": "gcc-x64"
 }

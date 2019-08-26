@@ -16,10 +16,13 @@
 
 #include <linux/slab.h>
 #include <linux/mm.h>
-#include <linux/iomap.h>
+
+#include <linux/stat.h>
 #include <linux/uaccess.h>
 
 #include <linux/io.h>
+#include <linux/ioport.h>
+#include <arch/arm/include/asm/io.h>
 
 #include <linux/delay.h>
 #include <linux/interrupt.h>

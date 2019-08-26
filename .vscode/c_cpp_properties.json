@@ -3,12 +3,13 @@
         {
             "name": "Win32",
             "includePath": [
-                "${workspaceFolder}/**",
-                "D:/linux/include/**"
+                "${workspaceFolder}/*",
+				"${env:SOURCES}/linux/include/*",
+				"${env:SOURCES}/linux/*"
             ],
             "browse": {
                 "path": [
-                    "D:/linux/"
+                    "${env:SOURCES}/linux/"
                 ]
             },
             "cStandard": "c11",
@@ -18,13 +19,13 @@
         {
             "name": "linux",
             "includePath": [
-                "${workspaceFolder}/**",
-                "${env:SOURCES}/linux/include/**"
+                "${workspaceFolder}/*",
+				"${env:SOURCES}/linux/include/*",
+				"${env:SOURCES}/linux/*"
             ],
             "browse": {
                 "path": [
-					"${env:SOURCES}/linux/**",
-                    "${env:SOURCES}/linux/**"
+					"${env:SOURCES}/linux/*"
                 ]
             },
             "cStandard": "c11",
@@ -35,12 +36,13 @@
 		{
 			"name": "ITOP-4412",
 			"includePath": [
-				"${workspaceFolder}/**",
-				"${env:SOURCES}/ITOP-4412/include/**"
+				"${workspaceFolder}/*",
+				"${env:SOURCES}/ITOP-4412/include/*",
+				"${env:SOURCES}/ITOP-4412/*"
 			],
 			"browse": {
 				"path": [
-					"${env:SOURCES}/ITOP-4412/**"
+					"${env:SOURCES}/ITOP-4412/*"
 				]
 			},
 			"defines": [
