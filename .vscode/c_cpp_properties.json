@@ -38,7 +38,10 @@
 			"includePath": [
 				"${workspaceFolder}/*",
 				"${env:SOURCES}/ITOP-4412/include/*",
-				"${env:SOURCES}/ITOP-4412/*"
+				"${env:SOURCES}/ITOP-4412/*",
+				"${enc:SOORCES}/ITOP-4412/arch/arm/plat-samsung/include/*",
+				"${env:SOURCES}/ITOP-4412/arch/arm/mach-exynos/include/*",
+				"${env:SOURCES}/ITOP-4412/arch/arm/include/*"
 			],
 			"browse": {
 				"path": [
