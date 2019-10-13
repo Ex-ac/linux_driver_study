@@ -20,5 +20,21 @@
 		"gpio-cfg.h": "c",
 		"memory.h": "c"
 	},
-    "C_Cpp.default.intelliSenseMode": "gcc-x64"
+	"C_Cpp.default.intelliSenseMode": "gcc-x64",
+	"workbench.colorCustomizations": {
+		"activityBar.background": "#f6dad4",
+		"activityBar.foreground": "#15202b",
+		"activityBar.inactiveForeground": "#15202b99",
+		"activityBarBadge.background": "#219e37",
+		"activityBarBadge.foreground": "#e7e7e7",
+		"titleBar.activeBackground": "#edb6aa",
+		"titleBar.inactiveBackground": "#edb6aa99",
+		"titleBar.activeForeground": "#15202b",
+		"titleBar.inactiveForeground": "#15202b99",
+		"statusBar.background": "#edb6aa",
+		"statusBarItem.hoverBackground": "#e49280",
+		"statusBar.foreground": "#15202b"
+	},
+	"peacock.color": "#edb6aa",
+	"peacock.remoteColor": "#6c9748"
 }

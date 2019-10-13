@@ -1,5 +1,5 @@
 OUTPUT_DIR := $(CURDIR)
-KERNEL_DIR:= /home/ex/Sources/ITOP-4412/
+KERNEL_DIR:= $(SOURCES)/ITOP-4412/
 
 obj-m := leds.o
 
@@ -19,4 +19,4 @@ test.o test2.o: test.c test2.c
 clean-test:
 	rm -rf test.o
 	rm -rf test2.o
-	rm -rf test.out
+	rm -rf test.outmake
