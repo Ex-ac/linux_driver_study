@@ -18,22 +18,28 @@
 		"gpio-exynos4.h": "c",
 		"gpio.h": "c",
 		"gpio-cfg.h": "c",
-		"memory.h": "c"
+		"memory.h": "c",
+		"module.h": "c"
 	},
 	"C_Cpp.default.intelliSenseMode": "gcc-x64",
 	"workbench.colorCustomizations": {
-		"activityBar.background": "#f6dad4",
+		"activityBar.background": "#85b35f",
 		"activityBar.foreground": "#15202b",
 		"activityBar.inactiveForeground": "#15202b99",
-		"activityBarBadge.background": "#219e37",
-		"activityBarBadge.foreground": "#e7e7e7",
-		"titleBar.activeBackground": "#edb6aa",
-		"titleBar.inactiveBackground": "#edb6aa99",
+		"activityBarBadge.background": "#e9eff5",
+		"activityBarBadge.foreground": "#15202b",
+		"titleBar.activeBackground": "#6c9748",
+		"titleBar.inactiveBackground": "#6c974899",
 		"titleBar.activeForeground": "#15202b",
 		"titleBar.inactiveForeground": "#15202b99",
-		"statusBar.background": "#edb6aa",
-		"statusBarItem.hoverBackground": "#e49280",
-		"statusBar.foreground": "#15202b"
+		"statusBar.background": "#6c9748",
+		"statusBarItem.hoverBackground": "#537438",
+		"statusBar.foreground": "#15202b",
+		"activityBar.activeBackground": "#85b35f",
+		"commandCenter.border": "#15202b99",
+		"sash.hoverBorder": "#85b35f",
+		"statusBarItem.remoteBackground": "#6c9748",
+		"statusBarItem.remoteForeground": "#15202b"
 	},
 	"peacock.color": "#edb6aa",
 	"peacock.remoteColor": "#6c9748"

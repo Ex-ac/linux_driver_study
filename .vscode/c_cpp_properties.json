@@ -4,8 +4,8 @@
             "name": "Win32",
             "includePath": [
                 "${workspaceFolder}/*",
-				"${env:SOURCES}/linux/include/*",
-				"${env:SOURCES}/linux/*"
+                "${env:SOURCES}/linux/include/*",
+                "${env:SOURCES}/linux/*"
             ],
             "browse": {
                 "path": [
@@ -20,39 +20,39 @@
             "name": "linux",
             "includePath": [
                 "${workspaceFolder}/*",
-				"${env:SOURCES}/linux/include/*",
-				"${env:SOURCES}/linux/*"
+                "${env:SOURCES}/linux/include/*",
+                "${env:SOURCES}/linux/*"
             ],
             "browse": {
                 "path": [
-					"${env:SOURCES}/linux/*"
+                    "${env:SOURCES}/linux/*"
                 ]
             },
             "cStandard": "c11",
             "cppStandard": "c++17",
-            "intelliSenseMode": "gcc-x64",
-            "compilerPath": "/usr/bin/gcc"
-		},
-		{
-			"name": "ITOP-4412",
-			"includePath": [
-				"${workspaceFolder}/*",
-				"${env:SOURCES}/ITOP-4412/include/*",
-				"${env:SOURCES}/ITOP-4412/*",
-				"${enc:SOORCES}/ITOP-4412/arch/arm/plat-samsung/include/*",
-				"${env:SOURCES}/ITOP-4412/arch/arm/mach-exynos/include/*",
-				"${env:SOURCES}/ITOP-4412/arch/arm/include/*"
-			],
-			"browse": {
-				"path": [
-					"${env:SOURCES}/ITOP-4412/*"
-				]
-			},
-			"defines": [
-				"__KERNEL__"
-			],
-			"compilerPath": "/usr/local/arm/arm-2009q3/bin/arm-none-linux-gnueabi-gcc"
-		}
+            "intelliSenseMode": "clang-arm64",
+            "compilerPath": "/usr/bin/clang"
+        },
+        {
+            "name": "ITOP-4412",
+            "includePath": [
+                "${workspaceFolder}/*",
+                "${env:SOURCES}/ITOP-4412/include/*",
+                "${env:SOURCES}/ITOP-4412/*",
+                "${enc:SOORCES}/ITOP-4412/arch/arm/plat-samsung/include/*",
+                "${env:SOURCES}/ITOP-4412/arch/arm/mach-exynos/include/*",
+                "${env:SOURCES}/ITOP-4412/arch/arm/include/*"
+            ],
+            "browse": {
+                "path": [
+                    "${env:SOURCES}/ITOP-4412/*"
+                ]
+            },
+            "defines": [
+                "__KERNEL__"
+            ],
+            "compilerPath": "/usr/local/arm/arm-2009q3/bin/arm-none-linux-gnueabi-gcc"
+        }
     ],
     "version": 4
 }
